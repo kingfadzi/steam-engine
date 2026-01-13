@@ -86,7 +86,7 @@ Both `shared/artifacts/` and `shared/config/` persist across releases.
 
 ## Notes
 
-- Jira PAT only supports: `jira_board`, `jira_issue`, `jira_sprint`, `jira_backlog_issue`
+- **Jira DC requires jira@1.1.0** - Plugin 2.x uses Cloud v3 API which doesn't work with Data Center
 - Uses `network_mode: host` for access to internal servers
 - Based on AlmaLinux 9
 - Offline build uses `Dockerfile.offline` with pre-downloaded artifacts
