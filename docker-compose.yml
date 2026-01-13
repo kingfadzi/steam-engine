@@ -1,0 +1,10 @@
+services:
+  steampipe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: steampipe
+    network_mode: host
+    volumes:
+      - ./config:/home/steampipe/.steampipe/config
+    restart: unless-stopped
