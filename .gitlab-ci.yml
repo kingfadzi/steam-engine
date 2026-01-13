@@ -1,0 +1,93 @@
+# GitLab CI/CD for steam-engine
+# Follows lean-web deployment model
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        - "*.md"
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+include:
+  - project: 'staging/builder-images'
+    file: 'builder-images.yml'
+    ref: main
+
+  - component: $CI_SERVER_HOST/staging/universal-ssh-deploy/deploy@main
+    inputs:
+      app_name: steam-engine
+      base_dir: /apps/data/steam-engine
+      deploy_host: mars
+      deploy_port: "22"
+      ssh_user: fadzi
+      csm_auth_url: https://phobos.butterflycluster.com:8200/v1/auth/jwt/login
+      csm_role: steam-engine-deploy
+      csm_secret_urls:
+        - secret/data/infrastructure/ssh/mars
+      csm_component_url: $CI_SERVER_HOST/staging/vault-secret-fetcher/vault-retrieve
+      csm_component_version: release/2.x
+      builder_image: $BUILDER_IMAGE_PYTHON_311
+      deploy_stage: deploy
+
+stages:
+  - validate
+  - build
+  - deploy
+  - verify
+
+default:
+  image: $BUILDER_IMAGE_PYTHON_311
+
+variables:
+  GIT_STRATEGY: clone
+  GIT_DEPTH: 20
+  IMAGE_NAME: steam-engine-steampipe
+
+# 1. Validate deploy scripts
+validate:
+  stage: validate
+  image: alpine:latest
+  script:
+    - |
+      echo "Validating deploy scripts..."
+      REQUIRED="deploy/build_release.sh deploy/stop.sh deploy/start.sh deploy/smoke_test.sh"
+      for script in $REQUIRED; do
+        if [ ! -f "$script" ]; then
+          echo "ERROR: Missing $script"; exit 1
+        elif [ ! -x "$script" ]; then
+          echo "ERROR: Not executable $script"; exit 1
+        else
+          echo "OK: $script"
+        fi
+      done
+      echo "Validation passed"
+  rules:
+    - if: $CI_COMMIT_BRANCH
+
+# 2. Build Docker image and package as tarball
+build_release:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  script:
+    - chmod +x deploy/build_release.sh
+    - ./deploy/build_release.sh
+    - test -f release.tar.gz || (echo "ERROR: release.tar.gz not created" && exit 1)
+    - ls -lh release.tar.gz
+  artifacts:
+    paths:
+      - release.tar.gz
+    expire_in: 1 day
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH
+      when: manual
+      allow_failure: true
+
+# Deploy and smoke_test jobs are added by universal-ssh-deploy component

@@ -1,6 +1,9 @@
 # Environment files with secrets
 .env
 
+# Downloaded artifacts for air-gapped builds
+artifacts/
+
 # Docker volumes (if local)
 data/
 
