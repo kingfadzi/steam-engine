@@ -68,12 +68,21 @@ scripts/build.sh
 
 GitLab pipeline deploys to target server automatically.
 
-**Pre-requisite:** Stage artifacts once before first deployment:
+**Pre-requisites (once before first deployment):**
+
+1. Stage artifacts:
 ```bash
 scripts/stage_artifacts.sh
 ```
 
-Artifacts persist in `shared/artifacts/` across releases.
+2. Configure credentials on server:
+```bash
+ssh mars "vi /apps/data/steam-engine/shared/config/jira.spc"
+ssh mars "vi /apps/data/steam-engine/shared/config/gitlab.spc"
+ssh mars "vi /apps/data/steam-engine/shared/config/bitbucket.spc"
+```
+
+Both `shared/artifacts/` and `shared/config/` persist across releases.
 
 ## Notes
 
