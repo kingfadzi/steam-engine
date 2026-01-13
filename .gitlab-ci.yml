@@ -24,7 +24,7 @@ include:
       deploy_port: "22"
       ssh_user: fadzi
       csm_auth_url: https://phobos.butterflycluster.com:8200/v1/auth/jwt/login
-      csm_role: steam-engine-deploy
+      csm_role: lean-web-deploy
       csm_secret_urls:
         - secret/data/infrastructure/ssh/mars
       csm_component_url: $CI_SERVER_HOST/staging/vault-secret-fetcher/vault-retrieve
