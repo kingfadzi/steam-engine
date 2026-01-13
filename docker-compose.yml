@@ -2,7 +2,7 @@ services:
   steampipe:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.offline
     container_name: steampipe
     network_mode: host
     volumes:
