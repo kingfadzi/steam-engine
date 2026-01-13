@@ -78,7 +78,7 @@ build_release:
   script:
     - chmod +x deploy/build_release.sh
     - ./deploy/build_release.sh
-    - test -f release.tar.gz || (echo "ERROR: release.tar.gz not created" && exit 1)
+    - test -f release.tar.gz || { echo "ERROR: release.tar.gz not created"; exit 1; }
     - ls -lh release.tar.gz
   artifacts:
     paths:
