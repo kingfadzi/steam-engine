@@ -49,7 +49,7 @@ variables:
 # 1. Validate deploy scripts
 validate:
   stage: validate
-  image: alpine:latest
+  image: $BUILDER_IMAGE_PYTHON_311
   script:
     - |
       echo "Validating deploy scripts..."
@@ -70,7 +70,7 @@ validate:
 # 2. Package source as tarball for deployment
 build_release:
   stage: build
-  image: alpine:latest
+  image: $BUILDER_IMAGE_PYTHON_311
   script:
     - sh deploy/build_release.sh
     - ls -lh release.tar.gz
