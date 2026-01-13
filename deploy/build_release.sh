@@ -8,10 +8,14 @@ set -e
 
 echo "Building release artifact..."
 
+# Remove old tarball if exists
+rm -f release.tar.gz
+
 # Create a clean tarball excluding development/local files
+# Use --warning=no-file-changed to ignore files changing during archive
 tar --create \
     --gzip \
-    --file=release.tar.gz \
+    --file=/tmp/release.tar.gz \
     --exclude='.git' \
     --exclude='.gitignore' \
     --exclude='.env' \
@@ -19,6 +23,8 @@ tar --create \
     --exclude='.claude' \
     --exclude='release.tar.gz' \
     .
+
+mv /tmp/release.tar.gz release.tar.gz
 
 # Verify the tarball was created
 if [ ! -f release.tar.gz ]; then
