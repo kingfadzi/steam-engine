@@ -42,6 +42,13 @@ if [ "$ARTIFACTS_DIR" != "artifacts" ]; then
     cp "$ARTIFACTS_DIR"/*.tar.gz artifacts/
 fi
 
+# Use shared config if available (contains credentials)
+if [ -n "$BASE_DIR" ] && [ -d "$BASE_DIR/shared/config" ]; then
+    echo "Using shared config from $BASE_DIR/shared/config"
+    rm -rf config
+    ln -sfn "$BASE_DIR/shared/config" config
+fi
+
 # Ensure clean state before starting
 echo "Cleaning up any existing containers..."
 docker compose down 2>/dev/null || true
