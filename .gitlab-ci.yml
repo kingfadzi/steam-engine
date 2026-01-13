@@ -85,7 +85,5 @@ build_release:
     - if: $CI_COMMIT_BRANCH
       when: manual
       allow_failure: true
-  tags:
-    - docker-socket
 
 # Deploy and smoke_test jobs are added by universal-ssh-deploy component
