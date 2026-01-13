@@ -30,16 +30,16 @@ for f in $REQUIRED; do
     fi
 done
 
-# Create target directory
-ssh "$TARGET_USER@$TARGET_HOST" "mkdir -p $TARGET_PATH/artifacts"
+# Create target directory (use shared for persistence across releases)
+ssh "$TARGET_USER@$TARGET_HOST" "mkdir -p $TARGET_PATH/shared/artifacts"
 
 # Copy artifacts
-scp "$ARTIFACTS_DIR"/*.tar.gz "$TARGET_USER@$TARGET_HOST:$TARGET_PATH/artifacts/"
+scp "$ARTIFACTS_DIR"/*.tar.gz "$TARGET_USER@$TARGET_HOST:$TARGET_PATH/shared/artifacts/"
 
 # Verify
 echo ""
 echo "Verifying artifacts on target..."
-ssh "$TARGET_USER@$TARGET_HOST" "ls -lh $TARGET_PATH/artifacts/"
+ssh "$TARGET_USER@$TARGET_HOST" "ls -lh $TARGET_PATH/shared/artifacts/"
 
 echo ""
 echo "Done. Artifacts staged successfully."

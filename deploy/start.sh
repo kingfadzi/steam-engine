@@ -10,22 +10,35 @@ echo "Starting steam-engine..."
 
 # Verify artifacts exist for offline build
 echo "Checking for required artifacts..."
-REQUIRED_ARTIFACTS="artifacts/steampipe_linux_amd64.tar.gz artifacts/steampipe-db.tar.gz artifacts/steampipe-internal.tar.gz artifacts/steampipe-plugins.tar.gz"
+
+# Use shared artifacts location if BASE_DIR is set (deployed via pipeline)
+if [ -n "$BASE_DIR" ] && [ -d "$BASE_DIR/shared/artifacts" ]; then
+    ARTIFACTS_DIR="$BASE_DIR/shared/artifacts"
+else
+    ARTIFACTS_DIR="artifacts"
+fi
+
+REQUIRED="steampipe_linux_amd64.tar.gz steampipe-db.tar.gz steampipe-internal.tar.gz steampipe-plugins.tar.gz"
 MISSING=""
-for artifact in $REQUIRED_ARTIFACTS; do
-    if [ ! -f "$artifact" ]; then
-        MISSING="$MISSING $artifact"
+for f in $REQUIRED; do
+    if [ ! -f "$ARTIFACTS_DIR/$f" ]; then
+        MISSING="$MISSING $f"
     fi
 done
 
 if [ -n "$MISSING" ]; then
-    echo "ERROR: Missing artifacts:$MISSING"
+    echo "ERROR: Missing artifacts in $ARTIFACTS_DIR:$MISSING"
     echo ""
-    echo "To fix: Run scripts/download.sh on a connected machine, then copy artifacts/ to this server:"
-    echo "  scp -r artifacts/ user@this-server:\$(pwd)/artifacts/"
+    echo "To fix: Run scripts/download.sh on a connected machine, then copy to shared:"
+    echo "  scp -r artifacts/* user@server:$BASE_DIR/shared/artifacts/"
     exit 1
 fi
-echo "All artifacts present"
+echo "All artifacts present in $ARTIFACTS_DIR"
+
+# Symlink artifacts into release if using shared
+if [ "$ARTIFACTS_DIR" != "artifacts" ]; then
+    ln -sfn "$ARTIFACTS_DIR" artifacts
+fi
 
 # Ensure clean state before starting
 echo "Cleaning up any existing containers..."
