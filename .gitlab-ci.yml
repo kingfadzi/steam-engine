@@ -71,13 +71,10 @@ validate:
 build_release:
   stage: build
   image: docker:latest
-  services:
-    - docker:dind
   variables:
-    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_HOST: unix:///var/run/docker.sock
   script:
-    - chmod +x deploy/build_release.sh
-    - ./deploy/build_release.sh
+    - sh deploy/build_release.sh
     - ls -lh release.tar.gz
   artifacts:
     paths:
@@ -88,5 +85,7 @@ build_release:
     - if: $CI_COMMIT_BRANCH
       when: manual
       allow_failure: true
+  tags:
+    - docker-socket
 
 # Deploy and smoke_test jobs are added by universal-ssh-deploy component
