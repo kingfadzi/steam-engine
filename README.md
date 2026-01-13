@@ -50,8 +50,34 @@ connection "gitlab" {
 }
 ```
 
+## Air-Gapped Deployment
+
+```bash
+# 1. On connected machine: download artifacts
+scripts/download.sh
+
+# 2. Copy to target server
+scripts/stage_artifacts.sh <host> <base_path> <user>
+# Default: mars /apps/data/steam-engine fadzi
+
+# 3. Build offline (optional, for local testing)
+scripts/build.sh
+```
+
+## CI/CD Pipeline
+
+GitLab pipeline deploys to target server automatically.
+
+**Pre-requisite:** Stage artifacts once before first deployment:
+```bash
+scripts/stage_artifacts.sh
+```
+
+Artifacts persist in `shared/artifacts/` across releases.
+
 ## Notes
 
 - Jira PAT only supports: `jira_board`, `jira_issue`, `jira_sprint`, `jira_backlog_issue`
 - Uses `network_mode: host` for access to internal servers
 - Based on AlmaLinux 9
+- Offline build uses `Dockerfile.offline` with pre-downloaded artifacts
