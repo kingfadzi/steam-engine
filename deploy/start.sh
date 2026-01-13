@@ -1,21 +1,26 @@
-#!/bin/bash
+#!/bin/sh
+#
+# Start Script for steam-engine
+# Builds and starts Docker containers
+#
+
 set -e
 
-APP_DIR="${BASE_DIR:-/apps/data/steam-engine}"
-cd "$APP_DIR"
+echo "Starting steam-engine..."
 
-echo "==> Extracting release..."
-tar -xvf release.tar.gz
-tar -xzvf config.tar.gz
+# Ensure clean state before starting
+echo "Cleaning up any existing containers..."
+docker compose down 2>/dev/null || true
 
-echo "==> Loading Docker image..."
-gunzip -c release.tar.gz 2>/dev/null | docker load || docker load < release.tar.gz
+# Build and start
+echo "Building Docker image..."
+docker compose build
 
-echo "==> Starting steam-engine..."
+echo "Starting containers..."
 docker compose up -d
 
-echo "==> Waiting for service to start..."
+echo "Waiting for service to start..."
 sleep 10
 
-echo "==> Status:"
+echo "Containers started."
 docker compose ps

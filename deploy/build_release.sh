@@ -1,19 +1,29 @@
 #!/bin/sh
+#
+# Build Release Script for steam-engine
+# Creates release.tar.gz for deployment
+#
+
 set -e
 
-echo "==> Building Docker image..."
-docker build -t steam-engine-steampipe:latest -f Dockerfile .
+echo "Building release artifact..."
 
-echo "==> Saving image to tarball..."
-docker save steam-engine-steampipe:latest | gzip > release.tar.gz
+# Create a clean tarball excluding development/local files
+tar --create \
+    --gzip \
+    --file=release.tar.gz \
+    --exclude='.git' \
+    --exclude='.gitignore' \
+    --exclude='.env' \
+    --exclude='artifacts' \
+    --exclude='.claude' \
+    --exclude='release.tar.gz' \
+    .
 
-echo "==> Packaging config files..."
-tar -czvf config.tar.gz config/ docker-compose.yml
+# Verify the tarball was created
+if [ ! -f release.tar.gz ]; then
+    echo "ERROR: Failed to create release.tar.gz"
+    exit 1
+fi
 
-echo "==> Creating final release..."
-# Combine image and config into single release
-tar -cvf release-full.tar release.tar.gz config.tar.gz
-mv release-full.tar release.tar.gz
-
-echo "==> Release created: release.tar.gz"
-ls -lh release.tar.gz
+echo "Created release.tar.gz ($(du -h release.tar.gz | cut -f1))"

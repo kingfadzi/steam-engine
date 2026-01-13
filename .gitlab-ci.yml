@@ -67,12 +67,10 @@ validate:
   rules:
     - if: $CI_COMMIT_BRANCH
 
-# 2. Build Docker image and package as tarball
+# 2. Package source as tarball for deployment
 build_release:
   stage: build
-  image: docker:latest
-  variables:
-    DOCKER_HOST: unix:///var/run/docker.sock
+  image: alpine:latest
   script:
     - sh deploy/build_release.sh
     - ls -lh release.tar.gz
