@@ -13,9 +13,9 @@ RUN useradd -ms /bin/bash steampipe
 USER steampipe
 WORKDIR /home/steampipe
 
-# Install plugins
+# Install plugins (jira@1.1.0 for DC compatibility - 2.x uses Cloud v3 API)
 RUN steampipe plugin install theapsgroup/gitlab --skip-config && \
-    steampipe plugin install jira --skip-config && \
+    steampipe plugin install jira@1.1.0 --skip-config && \
     steampipe plugin install bitbucket --skip-config
 
 # Configs will usually be mounted at runtime:

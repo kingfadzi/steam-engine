@@ -38,9 +38,9 @@ docker run --rm \
       # Extract steampipe
       tar -xzf steampipe_linux_amd64.tar.gz
 
-      # Install plugins
+      # Install plugins (jira@1.1.0 for DC compatibility - 2.x uses Cloud v3 API)
       echo \"==> Installing plugins...\"
-      ./steampipe plugin install theapsgroup/gitlab jira bitbucket --skip-config
+      ./steampipe plugin install theapsgroup/gitlab jira@1.1.0 bitbucket --skip-config
 
       # Trigger embedded Postgres download
       echo \"==> Downloading embedded PostgreSQL...\"
