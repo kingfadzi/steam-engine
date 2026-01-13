@@ -45,6 +45,7 @@ fi
 # Ensure clean state before starting
 echo "Cleaning up any existing containers..."
 docker compose down 2>/dev/null || true
+docker rm -f steampipe 2>/dev/null || true
 
 # Build and start
 echo "Building Docker image..."
