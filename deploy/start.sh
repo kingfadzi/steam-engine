@@ -35,9 +35,11 @@ if [ -n "$MISSING" ]; then
 fi
 echo "All artifacts present in $ARTIFACTS_DIR"
 
-# Symlink artifacts into release if using shared
+# Copy artifacts into release for Docker build context
 if [ "$ARTIFACTS_DIR" != "artifacts" ]; then
-    ln -sfn "$ARTIFACTS_DIR" artifacts
+    echo "Copying artifacts from $ARTIFACTS_DIR..."
+    mkdir -p artifacts
+    cp "$ARTIFACTS_DIR"/*.tar.gz artifacts/
 fi
 
 # Ensure clean state before starting
