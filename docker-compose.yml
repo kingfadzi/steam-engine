@@ -4,7 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile.offline
     container_name: steampipe
-    network_mode: host
+    ports:
+      - "9193:9193"
     volumes:
       - ./config:/home/steampipe/.steampipe/config
     restart: unless-stopped
