@@ -11,6 +11,7 @@
 #   ./binaries.sh [--force]
 #
 # Environment variables (or set in profiles/base.args):
+#   TLS_CA_BUNDLE      - Path to CA bundle for TLS verification (corporate environments)
 #   GATEWAY_REPO       - Git repo URL (default: git@github.com:kingfadzi/gateway.git)
 #   GATEWAY_REF        - Branch/tag/commit (default: main)
 #   GATEWAY_BUILD_OPTS - Maven options (default: -DskipTests -q)
@@ -66,6 +67,26 @@ load_config
 GATEWAY_REPO="${GATEWAY_REPO:-git@github.com:kingfadzi/gateway.git}"
 GATEWAY_REF="${GATEWAY_REF:-main}"
 GATEWAY_BUILD_OPTS="${GATEWAY_BUILD_OPTS:--DskipTests -q}"
+
+# TLS CA Bundle (for corporate environments)
+TLS_CA_BUNDLE="${TLS_CA_BUNDLE:-}"
+TLS_WARNING_SHOWN=false
+
+setup_tls() {
+    if [ -n "$TLS_CA_BUNDLE" ]; then
+        if [ -f "$TLS_CA_BUNDLE" ]; then
+            export SSL_CERT_FILE="$TLS_CA_BUNDLE"
+        else
+            echo -e "\033[0;31mERROR:\033[0m TLS_CA_BUNDLE set but file not found: $TLS_CA_BUNDLE"
+            exit 1
+        fi
+    else
+        if [ "$TLS_WARNING_SHOWN" = false ]; then
+            echo -e "\033[1;33mWARNING:\033[0m TLS_CA_BUNDLE not set - using system certificates"
+            TLS_WARNING_SHOWN=true
+        fi
+    fi
+}
 
 # Colors
 GREEN='\033[0;32m'
@@ -219,6 +240,7 @@ download_artifacts() {
         return
     fi
 
+    setup_tls
     check_download_requirements
     rm -rf "$WORK_DIR"
     mkdir -p "$WORK_DIR"
@@ -364,6 +386,12 @@ main() {
     echo "============================================"
     echo "  Steam Engine Binaries"
     echo "============================================"
+    echo ""
+    if [ -n "$TLS_CA_BUNDLE" ]; then
+        echo "TLS: $TLS_CA_BUNDLE"
+    else
+        echo "TLS: (system certificates)"
+    fi
     echo ""
     echo "Steampipe:"
     echo "  STEAMPIPE_VERSION=$STEAMPIPE_VERSION"
