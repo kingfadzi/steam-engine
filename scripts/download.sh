@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Download artifacts for Steam Engine (air-gapped deployment)
+# Download artifacts for Steam Engine
 #
 # This script downloads all required artifacts using oras (OCI Registry As Storage)
 # and curl. No steampipe execution required - pure downloads only.

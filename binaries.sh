@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Prepare binaries for Steam Engine WSL image (air-gapped deployment)
+# Prepare binaries for Steam Engine WSL image
 #
 # This script:
 # 1. Downloads artifacts if not present (requires network)
