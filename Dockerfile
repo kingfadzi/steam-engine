@@ -131,14 +131,21 @@ RUN chmod +x /usr/local/bin/*.sh
 COPY config/wsl.conf /etc/wsl.conf
 
 # ============================================
-# User Setup
+# Service User (owns steampipe/gateway)
 # ============================================
-ARG USERNAME=steampipe
-RUN useradd -m -s /bin/bash ${USERNAME} \
-    && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/${USERNAME}
+RUN useradd -r -s /sbin/nologin steampipe
 
 # Set ownership
-RUN chown -R ${USERNAME}:${USERNAME} /opt/steampipe /opt/gateway
+RUN chown -R steampipe:steampipe /opt/steampipe /opt/gateway
+
+# ============================================
+# Default Login User
+# ============================================
+ARG DEFAULT_USER=fadzi
+RUN useradd -m -s /bin/bash ${DEFAULT_USER} \
+    && echo "${DEFAULT_USER}:password" | chpasswd \
+    && echo "${DEFAULT_USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${DEFAULT_USER} \
+    && chmod 0440 /etc/sudoers.d/${DEFAULT_USER}
 
 # ============================================
 # DNS (baked per profile)
@@ -154,6 +161,10 @@ RUN for dns in ${DNS_SERVERS}; do echo "nameserver $dns" | tr -d '\r' >> /etc/re
 ENV STEAMPIPE_PORT=${STEAMPIPE_PORT}
 ENV GATEWAY_PORT=${GATEWAY_PORT}
 ENV WIN_MOUNT=${WIN_MOUNT}
+
+# Default user for WSL
+USER ${DEFAULT_USER}
+WORKDIR /home/${DEFAULT_USER}
 
 # Default to systemd
 CMD ["/sbin/init"]
