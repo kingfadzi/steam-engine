@@ -1,6 +1,6 @@
 # Steam Engine
 
-WSL image for Steampipe + Gateway ETL. Extracts Jira/GitLab data via Steampipe and loads to DW PostgreSQL for dbt transforms.
+WSL image for Steampipe + Gateway ETL. Extracts Jira/GitLab/SonarQube data and loads to DW PostgreSQL for dbt transforms.
 
 ## Quick Start
 
@@ -81,6 +81,8 @@ DW_PORT=5432
 DW_DATABASE=lct_data
 DW_USER=gateway
 DW_PASSWORD=xxx
+SONARQUBE_URL=https://sonarqube.company.com
+SONARQUBE_TOKEN=xxx
 ```
 
 ## Scripts
