@@ -41,8 +41,7 @@ steam-engine/
 ├── scripts/
 │   ├── bin/
 │   ├── init/
-│   ├── profile.d/
-│   └── download.sh
+│   └── profile.d/
 ├── binaries/
 └── artifacts/
 ```
@@ -89,9 +88,8 @@ SONARQUBE_TOKEN=xxx
 
 | Script | Purpose |
 |--------|---------|
-| `binaries.sh` | Download/build steampipe bundle + gateway JAR |
-| `binaries.sh --force` | Rebuild binaries |
+| `binaries.sh` | Download artifacts + build steampipe bundle + gateway JAR |
+| `binaries.sh --force` | Re-download and rebuild |
 | `build.sh <profile>` | Build WSL image |
 | `build.sh <profile> --validate` | Build with smoke tests |
 | `build.sh <profile> --no-cache` | Force full rebuild |
-| `scripts/download.sh` | Download steampipe artifacts |
