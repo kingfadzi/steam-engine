@@ -64,7 +64,7 @@ GATEWAY_REPO=git@github.com:myorg/gateway.git ./binaries.sh
 
 ### Secrets
 
-Create on Windows at `C:\devhome\projects\wsl\secrets\steam-engine\`:
+Create on Windows at `C:\devhome\projects\steamengine\secrets\`:
 
 **steampipe.env**
 ```bash
