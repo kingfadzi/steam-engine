@@ -13,6 +13,7 @@ ARG STEAMPIPE_PORT=9193
 ARG GATEWAY_PORT=8080
 ARG WIN_USER=fadzi
 ARG WIN_MOUNT=/mnt/c/devhome/projects/wsl
+ARG TLS_CA_BUNDLE_URL=
 
 # ============================================
 # Base System
@@ -25,12 +26,14 @@ RUN dnf install -y \
 RUN dnf install -y --allowerasing \
     bash-completion \
     bind-utils \
+    ca-certificates \
     curl \
     git \
     hostname \
     jq \
     less \
     net-tools \
+    openssl \
     procps-ng \
     sudo \
     tar \
@@ -48,6 +51,26 @@ RUN dnf install -y --allowerasing \
 RUN dnf install -y java-${JAVA_VERSION}-openjdk-headless && dnf clean all
 
 ENV JAVA_HOME=/usr/lib/jvm/jre-${JAVA_VERSION}
+
+# ============================================
+# Corporate TLS CA Bundle + Java Cacerts
+# ============================================
+ARG TLS_CA_BUNDLE_URL
+RUN if [ -n "$TLS_CA_BUNDLE_URL" ]; then \
+        curl -fL# "$TLS_CA_BUNDLE_URL" -o /tmp/certs.zip && \
+        unzip -q /tmp/certs.zip -d /tmp/certs && \
+        find /tmp/certs \( -name "*.pem" -o -name "*.crt" -o -name "*.cer" \) \
+            ! -name "cacerts" -exec cp {} /etc/pki/ca-trust/source/anchors/ \; && \
+        update-ca-trust extract && \
+        JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java) 2>/dev/null)) 2>/dev/null) && \
+        if [ -n "$JAVA_HOME" ] && [ -d "$JAVA_HOME/lib/security" ]; then \
+            find /tmp/certs -name "cacerts" -exec cp {} $JAVA_HOME/lib/security/cacerts \; ; \
+        fi && \
+        rm -rf /tmp/certs.zip /tmp/certs && \
+        echo "Corporate certificates installed"; \
+    else \
+        echo "TLS_CA_BUNDLE_URL not set - using system defaults"; \
+    fi
 
 # ============================================
 # Steampipe Bundle
