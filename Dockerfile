@@ -57,8 +57,7 @@ COPY binaries/steampipe-bundle.tgz /tmp/
 RUN mkdir -p /opt/steampipe \
     && tar -xzf /tmp/steampipe-bundle.tgz -C /opt/steampipe \
     && rm /tmp/steampipe-bundle.tgz \
-    && chmod +x /opt/steampipe/steampipe/steampipe \
-    && chmod +x /opt/steampipe/bin/*
+    && chmod +x /opt/steampipe/steampipe/steampipe
 
 # Create steampipe config directory
 RUN mkdir -p /opt/steampipe/config
