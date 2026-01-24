@@ -66,9 +66,10 @@ RUN chmod +x /opt/init/*.sh
 
 # ============================================
 # Profile Scripts (steam-engine specific)
+# Numbered 06-07 to run after base's 00-05
 # ============================================
 COPY scripts/profile.d/*.sh /etc/profile.d/
-RUN chmod 644 /etc/profile.d/*.sh
+RUN chmod 644 /etc/profile.d/06-*.sh /etc/profile.d/07-*.sh
 
 # ============================================
 # Utility Scripts
