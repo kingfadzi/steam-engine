@@ -1,10 +1,11 @@
 #!/bin/bash
 #
-# Download/prepare binaries for Steam Engine WSL image
+# Prepare binaries for Steam Engine WSL image (air-gapped deployment)
 #
 # This script:
-# 1. Builds steampipe bundle (or copies existing)
-# 2. Clones and builds gateway JAR from source
+# 1. Downloads artifacts if not present (requires network)
+# 2. Builds steampipe bundle from artifacts
+# 3. Clones and builds gateway JAR from source
 #
 # Usage:
 #   ./binaries.sh [--force]
@@ -17,11 +18,23 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(dirname "$SCRIPT_DIR")"
+REPO_DIR="$SCRIPT_DIR"
 BINARIES_DIR="$SCRIPT_DIR/binaries"
+ARTIFACTS_DIR="$SCRIPT_DIR/artifacts"
+BUILD_DIR="$SCRIPT_DIR/build"
 WORK_DIR="/tmp/steam-engine-build"
 
 FORCE=false
+
+# Version configuration (for steampipe bundle)
+STEAMPIPE_VERSION=latest
+POSTGRES_VERSION=14.19.0
+FDW_VERSION=2.1.4
+PLUGINS=(
+  "theapsgroup/gitlab:0.6.0"
+  "turbot/jira:1.1.0"
+  "turbot/bitbucket:1.3.0"
+)
 
 # Parse args
 for arg in "$@"; do
@@ -66,14 +79,87 @@ GATEWAY_BUILD_OPTS="${GATEWAY_BUILD_OPTS:--DskipTests -q}"
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 log_info() { echo -e "${GREEN}==>${NC} $1"; }
 log_warn() { echo -e "${YELLOW}WARNING:${NC} $1"; }
+log_error() { echo -e "${RED}ERROR:${NC} $1"; }
 
 # Ensure directories exist
 mkdir -p "$BINARIES_DIR"
+mkdir -p "$BUILD_DIR"
 mkdir -p "$WORK_DIR"
+
+# Download artifacts if needed
+download_artifacts() {
+    if [ -d "$ARTIFACTS_DIR" ] && [ -n "$(ls -A "$ARTIFACTS_DIR" 2>/dev/null)" ]; then
+        echo "  Artifacts directory exists, skipping download"
+        return
+    fi
+
+    log_info "Downloading artifacts..."
+    "$SCRIPT_DIR/scripts/download.sh"
+}
+
+# Build steampipe bundle from artifacts
+build_steampipe_bundle() {
+    local bundle_name="steampipe-bundle-dev"
+    local bundle_dir="$BUILD_DIR/$bundle_name"
+
+    log_info "Building steampipe bundle..."
+
+    # Validate artifacts
+    local missing=0
+    for artifact in steampipe_linux_amd64.tar.gz steampipe-plugins.tar.gz steampipe-db.tar.gz steampipe-internal.tar.gz; do
+        if [ ! -f "$ARTIFACTS_DIR/$artifact" ]; then
+            echo "  Missing: $artifact"
+            missing=1
+        fi
+    done
+
+    if [ $missing -eq 1 ]; then
+        log_error "Artifacts missing. Run './scripts/download.sh' first."
+        exit 1
+    fi
+
+    # Create bundle structure
+    rm -rf "$bundle_dir"
+    mkdir -p "$bundle_dir"/{bin,config,steampipe,db,plugins,internal}
+
+    # Extract artifacts
+    echo "  Extracting steampipe binary..."
+    tar -xzf "$ARTIFACTS_DIR/steampipe_linux_amd64.tar.gz" -C "$bundle_dir/steampipe"
+
+    echo "  Extracting plugins..."
+    tar -xzf "$ARTIFACTS_DIR/steampipe-plugins.tar.gz" -C "$bundle_dir/plugins"
+
+    echo "  Extracting database..."
+    tar -xzf "$ARTIFACTS_DIR/steampipe-db.tar.gz" -C "$bundle_dir/db"
+
+    echo "  Extracting internal files..."
+    tar -xzf "$ARTIFACTS_DIR/steampipe-internal.tar.gz" -C "$bundle_dir/internal"
+
+    # Set permissions
+    chmod +x "$bundle_dir/steampipe/steampipe" 2>/dev/null || true
+
+    # Create VERSION file
+    cat > "$bundle_dir/VERSION" << EOF
+Bundle Version: dev
+Build Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+Steampipe: ${STEAMPIPE_VERSION}
+PostgreSQL: ${POSTGRES_VERSION}
+FDW: ${FDW_VERSION}
+Plugins: ${PLUGINS[*]}
+EOF
+
+    # Create tarball
+    local tarball="$BUILD_DIR/${bundle_name}.tgz"
+    tar -czf "$tarball" -C "$bundle_dir" .
+
+    echo "  Created: $tarball"
+    echo "$tarball"
+}
 
 # Build/copy steampipe bundle
 prepare_steampipe_bundle() {
@@ -86,30 +172,23 @@ prepare_steampipe_bundle() {
         return
     fi
 
-    # Check if bundle already built in parent repo
+    # Check if bundle already built
     local existing
-    existing=$(find "$REPO_DIR/build" -name "steampipe-bundle-*.tgz" 2>/dev/null | head -1)
+    existing=$(find "$BUILD_DIR" -name "steampipe-bundle-*.tgz" 2>/dev/null | head -1)
 
-    if [ -n "$existing" ]; then
+    if [ -n "$existing" ] && [ "$FORCE" = false ]; then
         echo "  Copying from: $existing"
         cp "$existing" "$bundle"
     else
-        # Build the bundle
-        echo "  Building bundle..."
-        cd "$REPO_DIR"
-
         # Download artifacts if needed
-        if [ ! -d "$REPO_DIR/artifacts" ] || [ -z "$(ls -A "$REPO_DIR/artifacts" 2>/dev/null)" ]; then
-            echo "  Downloading artifacts..."
-            ./scripts/download.sh
-        fi
+        download_artifacts
 
-        # Build bundle
-        ./build_steampipe_bundle.sh
+        # Build the bundle
+        local built_bundle
+        built_bundle=$(build_steampipe_bundle)
 
         # Copy to binaries
-        existing=$(find "$REPO_DIR/build" -name "steampipe-bundle-*.tgz" | head -1)
-        cp "$existing" "$bundle"
+        cp "$built_bundle" "$bundle"
     fi
 
     local size
@@ -160,7 +239,7 @@ prepare_gateway_jar() {
         2>/dev/null | head -1)
 
     if [ -z "$built_jar" ]; then
-        echo "  ERROR: No JAR file found in target/"
+        log_error "No JAR file found in target/"
         exit 1
     fi
 
@@ -177,6 +256,11 @@ main() {
     echo "============================================"
     echo "  Steam Engine Binaries"
     echo "============================================"
+    echo ""
+    echo "Steampipe:"
+    echo "  STEAMPIPE_VERSION=$STEAMPIPE_VERSION"
+    echo "  POSTGRES_VERSION=$POSTGRES_VERSION"
+    echo "  PLUGINS=${PLUGINS[*]}"
     echo ""
     echo "Gateway:"
     echo "  GATEWAY_REPO=$GATEWAY_REPO"

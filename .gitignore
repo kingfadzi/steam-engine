@@ -1,11 +1,21 @@
-# Environment files with secrets
+# Environment files
 .env
 
-# Downloaded artifacts for air-gapped builds
+# Downloaded artifacts (prep phase)
 artifacts/
 
-# Docker volumes (if local)
-data/
+# Build output
+build/
+
+# Binaries (prepped by binaries.sh)
+binaries/
+!binaries/.gitkeep
+
+# WSL exports
+*.tar
+
+# Docker cache
+.docker/
 
 # OS files
 .DS_Store

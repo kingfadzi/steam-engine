@@ -27,7 +27,6 @@ WSL image for Steampipe + Gateway ETL. Extracts Jira/GitLab data via Steampipe a
 
 ```bash
 # 1. Prepare binaries (downloads artifacts, builds gateway JAR)
-cd wsl
 ./binaries.sh
 
 # 2. Build WSL image
@@ -38,32 +37,66 @@ cd wsl
 wsl --import steam-engine C:\wsl\steam-engine steam-engine-vpn.tar
 
 # 4. Configure secrets on Windows
-# See wsl/README.md for secret setup
+# See "Secrets" section below
 
 # 5. Start
 wsl -d steam-engine
+```
+
+## Air-Gapped Deployment
+
+This repo supports building WSL images in air-gapped environments.
+
+### Outside Air-Gap (Prep Phase)
+
+```bash
+# Download artifacts and build binaries (requires network)
+./binaries.sh
+
+# Copy entire repo + binaries/ into air-gapped environment
+```
+
+### Inside Air-Gap (Build Phase)
+
+```bash
+# 1. Update Dockerfile base image to RHEL UBI if needed
+# 2. Update configs for internal URLs:
+#    - config/steampipe/*.spc (Jira/GitLab URLs)
+#    - config/gateway/application.yml
+# 3. Update GATEWAY_REPO in profiles/base.args to internal repo
+
+# 4. Rebuild gateway JAR from internal repo (bundle already exists)
+./binaries.sh --force
+
+# 5. Build WSL image using pre-downloaded binaries
+./build.sh vpn
 ```
 
 ## Project Structure
 
 ```
 steam-engine/
-├── wsl/                        # WSL image builder
-│   ├── Dockerfile              # AlmaLinux 9 + Steampipe + Gateway
-│   ├── build.sh                # Build & export WSL image
-│   ├── binaries.sh             # Prepare binaries (steampipe + gateway)
-│   ├── profiles/               # Build variants (vpn, lan)
-│   ├── config/                 # Runtime configs
-│   │   ├── steampipe/          # Plugin configs (.spc)
-│   │   ├── gateway/            # Gateway application.yml
-│   │   └── systemd/            # Service definitions
-│   └── scripts/                # Init and utility scripts
-├── bundle-templates/           # Steampipe bundle templates
-├── build_steampipe_bundle.sh   # Build steampipe bundle
+├── Dockerfile              # WSL image definition
+├── build.sh                # Build and export WSL image
+├── binaries.sh             # Prepare binaries (downloads + packages)
+├── profiles/
+│   ├── base.args           # GATEWAY_REPO, common settings
+│   ├── vpn.args            # Public DNS profile
+│   └── lan.args            # Corporate DNS profile
+├── config/
+│   ├── wsl.conf
+│   ├── steampipe/*.spc     # Plugin configs (update for internal URLs)
+│   ├── gateway/application.yml
+│   └── systemd/*.service
 ├── scripts/
-│   └── download.sh             # Download steampipe artifacts
-├── test/                       # Integration tests
-├── versions.conf               # Artifact versions
+│   ├── bin/                # Utility scripts
+│   ├── init/               # Service init scripts
+│   ├── profile.d/          # Login-time scripts
+│   └── download.sh         # Download steampipe artifacts
+├── binaries/               # (gitignored) Prepped artifacts
+│   ├── steampipe-bundle.tgz
+│   └── gateway.jar
+├── artifacts/              # (gitignored) Downloaded artifacts
 └── README.md
 ```
 
@@ -71,7 +104,7 @@ steam-engine/
 
 ### Gateway Repo (configurable)
 
-Set in `wsl/profiles/base.args`:
+Set in `profiles/base.args`:
 ```
 GATEWAY_REPO=git@github.com:kingfadzi/gateway.git
 GATEWAY_REF=main
@@ -103,16 +136,6 @@ DW_USER=gateway
 DW_PASSWORD=xxx
 ```
 
-## Testing
-
-```bash
-# Test steampipe bundle in AlmaLinux 9 container
-./test/run-test.sh
-
-# Keep container for debugging
-./test/run-test.sh --keep
-```
-
 ## Components
 
 | Component | Purpose |
@@ -125,8 +148,6 @@ DW_PASSWORD=xxx
 
 | Script | Purpose |
 |--------|---------|
-| `wsl/binaries.sh` | Download/build steampipe bundle + gateway JAR |
-| `wsl/build.sh` | Build WSL image from profile |
-| `build_steampipe_bundle.sh` | Create self-contained steampipe tarball |
+| `binaries.sh` | Download/build steampipe bundle + gateway JAR |
+| `build.sh` | Build WSL image from profile |
 | `scripts/download.sh` | Download steampipe artifacts (requires oras) |
-| `test/run-test.sh` | Test bundle in container |

@@ -1,0 +1,13 @@
+.git
+.gitignore
+.gitattributes
+README.md
+*.md
+.gitlab-ci.yml
+artifacts/
+build/
+*.tar
+.idea/
+.vscode/
+.editorconfig
+.claude/

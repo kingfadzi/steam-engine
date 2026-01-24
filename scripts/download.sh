@@ -10,7 +10,7 @@
 #   - curl
 #
 # Usage:
-#   ./download.sh
+#   ./scripts/download.sh
 #
 set -e
 
@@ -19,13 +19,15 @@ REPO_DIR="$(dirname "$SCRIPT_DIR")"
 ARTIFACTS_DIR="$REPO_DIR/artifacts"
 WORK_DIR="$(mktemp -d)"
 
-# Source version configuration
-if [ -f "$REPO_DIR/versions.conf" ]; then
-  source "$REPO_DIR/versions.conf"
-else
-  echo "ERROR: versions.conf not found"
-  exit 1
-fi
+# Version configuration (inline)
+STEAMPIPE_VERSION=latest
+POSTGRES_VERSION=14.19.0
+FDW_VERSION=2.1.4
+PLUGINS=(
+  "theapsgroup/gitlab:0.6.0"
+  "turbot/jira:1.1.0"
+  "turbot/bitbucket:1.3.0"
+)
 
 # Cleanup on exit
 cleanup() {
