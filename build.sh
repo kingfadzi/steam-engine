@@ -11,6 +11,7 @@
 #
 # Examples:
 #   ./build.sh vpn
+#   ./build.sh vpn --validate
 #   ./build.sh lan --no-cache
 #
 set -euo pipefail
@@ -22,6 +23,7 @@ REPO_DIR="$SCRIPT_DIR"
 PROFILE="${1:-}"
 IMAGE_NAME="steam-engine"
 DOCKER_ARGS=""
+VALIDATE=false
 
 # Colors
 RED='\033[0;31m'
@@ -34,13 +36,14 @@ log_warn() { echo -e "${YELLOW}WARNING:${NC} $1"; }
 log_error() { echo -e "${RED}ERROR:${NC} $1"; }
 
 usage() {
-    echo "Usage: $0 <profile> [--no-cache]"
+    echo "Usage: $0 <profile> [options]"
     echo ""
     echo "Profiles:"
     echo "  vpn  - Public DNS (laptop/VPN)"
     echo "  lan  - Corporate DNS (VDI/LAN)"
     echo ""
     echo "Options:"
+    echo "  --validate  Run smoke tests before export (recommended)"
     echo "  --no-cache  Force rebuild without cache"
     exit 1
 }
@@ -55,6 +58,9 @@ for arg in "$@"; do
     case $arg in
         --no-cache)
             DOCKER_ARGS="--no-cache"
+            ;;
+        --validate)
+            VALIDATE=true
             ;;
     esac
 done
@@ -164,6 +170,100 @@ export_image() {
     echo "  Exported: $tarball ($size)"
 }
 
+# Validate image with smoke tests
+validate_image() {
+    log_info "Running validation tests..."
+
+    local container_id
+    local test_failed=0
+
+    # Run container in background with sleep to keep it alive
+    container_id=$(docker run -d "$IMAGE_NAME:$PROFILE" sleep infinity)
+
+    # Test 1: Steampipe binary exists and runs (must run as steampipe user)
+    echo -n "  Steampipe binary... "
+    if docker exec -u steampipe "$container_id" /opt/steampipe/steampipe/steampipe --version > /dev/null 2>&1; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}FAILED${NC}"
+        test_failed=1
+    fi
+
+    # Test 2: Gateway JAR exists
+    echo -n "  Gateway JAR... "
+    if docker exec "$container_id" test -f /opt/gateway/gateway.jar; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}FAILED${NC}"
+        test_failed=1
+    fi
+
+    # Test 3: Plugin configs exist
+    echo -n "  Plugin configs... "
+    if docker exec "$container_id" bash -c "ls /opt/steampipe/config/*.spc > /dev/null 2>&1"; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}FAILED${NC}"
+        test_failed=1
+    fi
+
+    # Test 4: Gateway config exists
+    echo -n "  Gateway config... "
+    if docker exec "$container_id" test -f /opt/gateway/application.yml; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}FAILED${NC}"
+        test_failed=1
+    fi
+
+    # Test 5: Steampipe user exists
+    echo -n "  Steampipe user... "
+    if docker exec "$container_id" id steampipe > /dev/null 2>&1; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}FAILED${NC}"
+        test_failed=1
+    fi
+
+    # Test 6: Permissions on /opt/steampipe
+    echo -n "  Permissions... "
+    if docker exec "$container_id" bash -c "[ \$(stat -c '%U' /opt/steampipe) = 'steampipe' ]"; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}FAILED${NC}"
+        test_failed=1
+    fi
+
+    # Test 7: Systemd services configured
+    echo -n "  Systemd services... "
+    if docker exec "$container_id" bash -c "test -f /etc/systemd/system/steampipe.service && test -f /etc/systemd/system/gateway.service"; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}FAILED${NC}"
+        test_failed=1
+    fi
+
+    # Test 8: Java available
+    echo -n "  Java runtime... "
+    if docker exec "$container_id" java -version > /dev/null 2>&1; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}FAILED${NC}"
+        test_failed=1
+    fi
+
+    # Cleanup
+    docker stop "$container_id" > /dev/null 2>&1
+    docker rm "$container_id" > /dev/null 2>&1
+
+    if [ $test_failed -eq 1 ]; then
+        log_error "Validation failed! Not exporting image."
+        exit 1
+    fi
+
+    log_info "All validation tests passed"
+}
+
 # Prompt for WSL import (Windows only)
 prompt_wsl_import() {
     # Check if running in Git Bash / MSYS
@@ -214,6 +314,11 @@ main() {
 
     check_binaries
     build_image
+
+    if [ "$VALIDATE" = true ]; then
+        validate_image
+    fi
+
     export_image
     prompt_wsl_import
 
