@@ -20,8 +20,8 @@ GATEWAY_REF=main
 GATEWAY_BUILD_OPTS=-DskipTests -q
 
 # Windows integration
-WIN_USER=fadzi
-WIN_MOUNT=/mnt/c/devhome/projects/wsl
+# WIN_USER is derived at runtime from Windows environment
+WIN_MOUNT=/mnt/c/devhome/projects/steamengine
 
 # User
 USERNAME=steampipe

@@ -11,8 +11,7 @@ ARG DNS_SERVERS="8.8.8.8 8.8.4.4"
 ARG JAVA_VERSION=21
 ARG STEAMPIPE_PORT=9193
 ARG GATEWAY_PORT=8080
-ARG WIN_USER=fadzi
-ARG WIN_MOUNT=/mnt/c/devhome/projects/wsl
+ARG WIN_MOUNT=/mnt/c/devhome/projects/steamengine
 ARG TLS_CA_BUNDLE_URL=
 
 # ============================================
