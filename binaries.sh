@@ -70,20 +70,18 @@ GATEWAY_BUILD_OPTS="${GATEWAY_BUILD_OPTS:--DskipTests -q}"
 
 # TLS CA Bundle (for corporate environments)
 TLS_CA_BUNDLE="${TLS_CA_BUNDLE:-}"
-TLS_WARNING_SHOWN=false
+ORAS_TLS_OPTS=()
+CURL_TLS_OPTS=()
 
 setup_tls() {
     if [ -n "$TLS_CA_BUNDLE" ]; then
         if [ -f "$TLS_CA_BUNDLE" ]; then
+            ORAS_TLS_OPTS=("--ca-file" "$TLS_CA_BUNDLE")
+            CURL_TLS_OPTS=("--cacert" "$TLS_CA_BUNDLE")
             export SSL_CERT_FILE="$TLS_CA_BUNDLE"
         else
             echo -e "\033[0;31mERROR:\033[0m TLS_CA_BUNDLE set but file not found: $TLS_CA_BUNDLE"
             exit 1
-        fi
-    else
-        if [ "$TLS_WARNING_SHOWN" = false ]; then
-            echo -e "\033[1;33mWARNING:\033[0m TLS_CA_BUNDLE not set - using system certificates"
-            TLS_WARNING_SHOWN=true
         fi
     fi
 }
@@ -131,7 +129,7 @@ download_steampipe() {
     else
         url="https://github.com/turbot/steampipe/releases/download/${STEAMPIPE_VERSION}/steampipe_linux_amd64.tar.gz"
     fi
-    curl -fSL "$url" -o "$ARTIFACTS_DIR/steampipe_linux_amd64.tar.gz"
+    curl -fSL "${CURL_TLS_OPTS[@]}" "$url" -o "$ARTIFACTS_DIR/steampipe_linux_amd64.tar.gz"
 }
 
 download_plugins() {
@@ -154,7 +152,7 @@ download_plugins() {
 
         local plugin_work="$WORK_DIR/plugin-$name"
         mkdir -p "$plugin_work"
-        oras pull "ghcr.io/turbot/steampipe/plugins/$org/$name:$version" -o "$plugin_work" 2>&1 | grep -v "^Skipped" || true
+        oras pull "${ORAS_TLS_OPTS[@]}" "ghcr.io/turbot/steampipe/plugins/$org/$name:$version" -o "$plugin_work" 2>&1 | grep -v "^Skipped" || true
 
         local plugin_dest="$plugins_dir/hub.steampipe.io/plugins/$org/$name@$version"
         mkdir -p "$plugin_dest"
@@ -195,7 +193,7 @@ download_postgres() {
 
     local pg_work="$WORK_DIR/postgres-work"
     mkdir -p "$pg_work"
-    oras pull "ghcr.io/turbot/steampipe/db:$POSTGRES_VERSION" -o "$pg_work" 2>&1 | grep -v "^Skipped" || true
+    oras pull "${ORAS_TLS_OPTS[@]}" "ghcr.io/turbot/steampipe/db:$POSTGRES_VERSION" -o "$pg_work" 2>&1 | grep -v "^Skipped" || true
 
     if [ -d "$pg_work/extracted-linux-amd64" ]; then
         cp -r "$pg_work/extracted-linux-amd64" "$db_dir/postgres"
@@ -207,13 +205,13 @@ download_postgres() {
     echo "  Downloading FDW v$FDW_VERSION..."
     local fdw_base="https://github.com/turbot/steampipe-postgres-fdw/releases/download/v$FDW_VERSION"
 
-    curl -fSL "$fdw_base/steampipe_postgres_fdw.so.linux_amd64.gz" -o "$WORK_DIR/fdw.so.gz"
+    curl -fSL "${CURL_TLS_OPTS[@]}" "$fdw_base/steampipe_postgres_fdw.so.linux_amd64.gz" -o "$WORK_DIR/fdw.so.gz"
     gunzip -c "$WORK_DIR/fdw.so.gz" > "$db_dir/postgres/lib/postgresql/steampipe_postgres_fdw.so"
     chmod +x "$db_dir/postgres/lib/postgresql/steampipe_postgres_fdw.so"
 
-    curl -fSL "$fdw_base/steampipe_postgres_fdw--1.0.sql" \
+    curl -fSL "${CURL_TLS_OPTS[@]}" "$fdw_base/steampipe_postgres_fdw--1.0.sql" \
         -o "$db_dir/postgres/share/postgresql/extension/steampipe_postgres_fdw--1.0.sql"
-    curl -fSL "$fdw_base/steampipe_postgres_fdw.control" \
+    curl -fSL "${CURL_TLS_OPTS[@]}" "$fdw_base/steampipe_postgres_fdw.control" \
         -o "$db_dir/postgres/share/postgresql/extension/steampipe_postgres_fdw.control"
 
     mkdir -p "$db_dir/data"
