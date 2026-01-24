@@ -282,7 +282,10 @@ EOF
 
     local tarball="$BUILD_DIR/${bundle_name}.tgz"
     tar -czf "$tarball" -C "$bundle_dir" .
-    echo "$tarball"
+
+    local size
+    size=$(du -h "$tarball" | cut -f1)
+    echo "  Created: $tarball ($size)"
 }
 
 prepare_steampipe_bundle() {
@@ -296,10 +299,9 @@ prepare_steampipe_bundle() {
     fi
 
     download_artifacts
+    build_steampipe_bundle
 
-    local built_bundle
-    built_bundle=$(build_steampipe_bundle)
-    cp "$built_bundle" "$bundle"
+    cp "$BUILD_DIR/steampipe-bundle-dev.tgz" "$bundle"
 
     local size
     size=$(du -h "$bundle" | cut -f1)
