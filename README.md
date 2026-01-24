@@ -29,9 +29,9 @@ WSL image for Steampipe + Gateway ETL. Extracts Jira/GitLab data via Steampipe a
 # 1. Prepare binaries (downloads artifacts, builds gateway JAR)
 ./binaries.sh
 
-# 2. Build WSL image
-./build.sh vpn    # For laptop/VPN (public DNS)
-./build.sh lan    # For VDI (corporate DNS)
+# 2. Build WSL image (--validate runs smoke tests before export)
+./build.sh vpn --validate    # For laptop/VPN (public DNS)
+./build.sh lan --validate    # For VDI (corporate DNS)
 
 # 3. Import to WSL (PowerShell)
 wsl --import steam-engine C:\wsl\steam-engine steam-engine-vpn.tar
@@ -41,35 +41,6 @@ wsl --import steam-engine C:\wsl\steam-engine steam-engine-vpn.tar
 
 # 5. Start
 wsl -d steam-engine
-```
-
-## Air-Gapped Deployment
-
-This repo supports building WSL images in air-gapped environments.
-
-### Outside Air-Gap (Prep Phase)
-
-```bash
-# Download artifacts and build binaries (requires network)
-./binaries.sh
-
-# Copy entire repo + binaries/ into air-gapped environment
-```
-
-### Inside Air-Gap (Build Phase)
-
-```bash
-# 1. Update Dockerfile base image to RHEL UBI if needed
-# 2. Update configs for internal URLs:
-#    - config/steampipe/*.spc (Jira/GitLab URLs)
-#    - config/gateway/application.yml
-# 3. Update GATEWAY_REPO in profiles/base.args to internal repo
-
-# 4. Rebuild gateway JAR from internal repo (bundle already exists)
-./binaries.sh --force
-
-# 5. Build WSL image using pre-downloaded binaries
-./build.sh vpn
 ```
 
 ## Project Structure
@@ -85,7 +56,7 @@ steam-engine/
 │   └── lan.args            # Corporate DNS profile
 ├── config/
 │   ├── wsl.conf
-│   ├── steampipe/*.spc     # Plugin configs (update for internal URLs)
+│   ├── steampipe/*.spc     # Plugin configs
 │   ├── gateway/application.yml
 │   └── systemd/*.service
 ├── scripts/
@@ -102,7 +73,7 @@ steam-engine/
 
 ## Configuration
 
-### Gateway Repo (configurable)
+### Gateway Repo
 
 Set in `profiles/base.args`:
 ```
@@ -149,5 +120,8 @@ DW_PASSWORD=xxx
 | Script | Purpose |
 |--------|---------|
 | `binaries.sh` | Download/build steampipe bundle + gateway JAR |
-| `build.sh` | Build WSL image from profile |
+| `binaries.sh --force` | Rebuild binaries even if they exist |
+| `build.sh <profile>` | Build WSL image from profile |
+| `build.sh <profile> --validate` | Build with smoke tests before export |
+| `build.sh <profile> --no-cache` | Force full Docker rebuild |
 | `scripts/download.sh` | Download steampipe artifacts (requires oras) |
