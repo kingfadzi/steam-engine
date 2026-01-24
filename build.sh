@@ -13,17 +13,25 @@
 #   ./build.sh vpn
 #   ./build.sh vpn --validate
 #   ./build.sh lan --no-cache
+#   ./build.sh vpn --rebuild-base
 #
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$SCRIPT_DIR"
 
+# Base image configuration
+WSL_BASE_REPO="${WSL_BASE_REPO:-git@github.com:kingfadzi/wsl-base.git}"
+WSL_BASE_DIR="${WSL_BASE_DIR:-$HOME/.cache/wsl-base}"
+# Check sibling directory first (for local development)
+WSL_BASE_LOCAL="${SCRIPT_DIR}/../wsl-base"
+
 # Defaults
 PROFILE="${1:-}"
 IMAGE_NAME="steam-engine"
 NO_CACHE=""
 VALIDATE=false
+REBUILD_BASE=false
 BUILD_ARGS=()
 
 # Colors
@@ -44,8 +52,9 @@ usage() {
     echo "  lan  - Corporate DNS (VDI/LAN)"
     echo ""
     echo "Options:"
-    echo "  --validate  Run smoke tests before export (recommended)"
-    echo "  --no-cache  Force rebuild without cache"
+    echo "  --validate      Run smoke tests before export (recommended)"
+    echo "  --no-cache      Force rebuild without cache"
+    echo "  --rebuild-base  Force rebuild of wsl-base image"
     exit 1
 }
 
@@ -63,6 +72,9 @@ for arg in "$@"; do
         --validate)
             VALIDATE=true
             ;;
+        --rebuild-base)
+            REBUILD_BASE=true
+            ;;
     esac
 done
 
@@ -73,6 +85,46 @@ if [ ! -f "$SCRIPT_DIR/profiles/${PROFILE}.args" ]; then
     ls -1 "$SCRIPT_DIR/profiles/"*.args | xargs -n1 basename | sed 's/.args$//'
     exit 1
 fi
+
+# ============================================
+# Base Image Auto-Build
+# ============================================
+ensure_base_image() {
+    local profile="$1"
+    local base_image="wsl-base:$profile"
+
+    # Check if we need to rebuild
+    if [ "$REBUILD_BASE" = true ]; then
+        log_info "Forcing rebuild of base image..."
+    elif docker image inspect "$base_image" >/dev/null 2>&1; then
+        log_info "Base image found: $base_image"
+        return 0
+    else
+        log_warn "Base image not found: $base_image"
+    fi
+
+    # Determine where to build from
+    local base_dir=""
+    if [ -d "$WSL_BASE_LOCAL/.git" ]; then
+        log_info "Using local wsl-base: $WSL_BASE_LOCAL"
+        base_dir="$WSL_BASE_LOCAL"
+    elif [ -d "$WSL_BASE_DIR/.git" ]; then
+        log_info "Using cached wsl-base: $WSL_BASE_DIR"
+        git -C "$WSL_BASE_DIR" pull --ff-only 2>/dev/null || true
+        base_dir="$WSL_BASE_DIR"
+    else
+        log_info "Cloning wsl-base repository..."
+        git clone --depth 1 "$WSL_BASE_REPO" "$WSL_BASE_DIR"
+        base_dir="$WSL_BASE_DIR"
+    fi
+
+    # Build base image
+    log_info "Building base image..."
+    cd "$base_dir"
+    ./binaries.sh 2>/dev/null || true
+    ./build.sh "$profile" $NO_CACHE
+    cd "$SCRIPT_DIR"
+}
 
 # Check binaries exist
 check_binaries() {
@@ -96,6 +148,9 @@ check_binaries() {
 # Load build args from profile into BUILD_ARGS array
 load_build_args() {
     local skip_args="GATEWAY_REPO GATEWAY_REF GATEWAY_BUILD_OPTS"
+
+    # Always pass PROFILE as first arg
+    BUILD_ARGS+=("--build-arg" "PROFILE=$PROFILE")
 
     for args_file in "$SCRIPT_DIR/profiles/base.args" "$SCRIPT_DIR/profiles/${PROFILE}.args"; do
         [ -f "$args_file" ] || continue
@@ -216,7 +271,7 @@ validate_image() {
         test_failed=1
     fi
 
-    # Test 8: Java available
+    # Test 8: Java available (inherited from base)
     echo -n "  Java runtime... "
     if docker exec "$container_id" java -version > /dev/null 2>&1; then
         echo -e "${GREEN}OK${NC}"
@@ -285,6 +340,7 @@ main() {
     echo "============================================"
     echo ""
 
+    ensure_base_image "$PROFILE"
     check_binaries
     build_image
 

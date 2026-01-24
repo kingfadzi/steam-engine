@@ -1,18 +1,9 @@
-# Base build arguments for Steam Engine WSL
-# These are shared across all profiles
-
-# Java version
-JAVA_VERSION=21
+# Steam Engine specific build arguments
+# Base system args (Java, Python, DNS, etc.) are in wsl-base
 
 # Ports
 STEAMPIPE_PORT=9193
 GATEWAY_PORT=8080
-
-# TLS CA bundle for binaries.sh (local path)
-# TLS_CA_BUNDLE=/path/to/ca-bundle.crt
-
-# TLS CA bundle URL for Docker build (downloaded during image build)
-# TLS_CA_BUNDLE_URL=https://internal-server/certs.zip
 
 # Gateway source (cloned and built during binaries.sh)
 GATEWAY_REPO=git@github.com:kingfadzi/gateway.git
@@ -22,5 +13,5 @@ GATEWAY_BUILD_OPTS=-DskipTests -q
 # Windows integration
 WIN_MOUNT=/mnt/c/devhome/projects/steamengine
 
-# Default login user
+# Default login user (must match wsl-base)
 DEFAULT_USER=fadzi
