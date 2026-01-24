@@ -1,3 +1,14 @@
+# Dockerfile for air-gapped Steampipe deployment
+#
+# Requires artifacts from scripts/download.sh:
+#   - artifacts/steampipe_linux_amd64.tar.gz
+#   - artifacts/steampipe-db.tar.gz
+#   - artifacts/steampipe-plugins.tar.gz
+#   - artifacts/steampipe-internal.tar.gz
+#
+# Build: docker build -f Dockerfile.offline -t steam-engine-steampipe .
+# Run:   docker compose up -d
+
 ARG BASE_IMAGE=almalinux:9
 FROM ${BASE_IMAGE}
 

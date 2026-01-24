@@ -1,0 +1,31 @@
+[Unit]
+Description=Steampipe SQL Service
+Documentation=https://steampipe.io/docs
+After=network.target
+
+[Service]
+Type=simple
+User=steampipe
+Group=steampipe
+
+Environment=STEAMPIPE_INSTALL_DIR=/opt/steampipe
+EnvironmentFile=-/opt/wsl-secrets/steampipe.env
+
+WorkingDirectory=/opt/steampipe
+
+ExecStartPre=/opt/init/steampipe.sh
+ExecStart=/opt/steampipe/steampipe/steampipe service start \
+    --database-listen=network \
+    --database-port=9193 \
+    --foreground
+
+ExecStop=/opt/steampipe/steampipe/steampipe service stop
+
+Restart=on-failure
+RestartSec=10
+
+# Give steampipe time to initialize
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+#!/bin/bash
+#
+# status - Check steampipe service status
+#
+# Usage:
+#   ./bin/status
+#
+set -e
+
+# Source common setup
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
+
+echo "Steampipe service status:"
+echo ""
+show_config
+echo ""
+
+steampipe service status

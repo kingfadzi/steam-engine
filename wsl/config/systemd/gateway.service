@@ -1,0 +1,33 @@
+[Unit]
+Description=Gateway ETL Service
+Documentation=https://github.com/kingfadzi/gateway
+After=network.target steampipe.service
+Wants=steampipe.service
+
+[Service]
+Type=simple
+User=steampipe
+Group=steampipe
+
+# Load secrets from Windows mount
+EnvironmentFile=-/opt/wsl-secrets/gateway.env
+EnvironmentFile=-/opt/wsl-secrets/steampipe.env
+
+WorkingDirectory=/opt/gateway
+
+ExecStartPre=/opt/init/gateway.sh
+ExecStart=/usr/bin/java \
+    -Xms256m \
+    -Xmx512m \
+    -Djava.security.egd=file:/dev/./urandom \
+    -jar /opt/gateway/gateway.jar \
+    --spring.config.location=file:/opt/gateway/application.yml
+
+Restart=on-failure
+RestartSec=30
+
+# Wait for steampipe to be ready
+ExecStartPre=/bin/bash -c 'until pg_isready -h localhost -p 9193 -U steampipe; do sleep 2; done'
+
+[Install]
+WantedBy=multi-user.target

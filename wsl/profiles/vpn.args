@@ -1,0 +1,5 @@
+# VPN Profile - Public DNS
+# Use when on laptop/VPN (corporate DNS not reachable)
+
+DNS_PRIMARY=8.8.8.8
+DNS_SECONDARY=8.8.4.4

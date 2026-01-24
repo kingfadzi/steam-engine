@@ -1,0 +1,22 @@
+# Docker Compose for testing steampipe bundle deployment
+#
+# Usage:
+#   ./test/run-test.sh
+#
+# Or manually:
+#   cd test && docker compose -f docker-compose.test.yml up --build
+#
+services:
+  steampipe:
+    build:
+      context: .
+      dockerfile: Dockerfile.alma9
+    container_name: steampipe-bundle-test
+    ports:
+      - "${TEST_PORT:-9194}:9193"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "9193", "-U", "steampipe"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
