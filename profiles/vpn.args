@@ -1,2 +1,4 @@
 # VPN Profile
 # Use when on laptop/VPN
+
+DNS_SERVERS=8.8.8.8 8.8.4.4

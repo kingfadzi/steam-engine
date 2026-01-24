@@ -7,6 +7,7 @@
 FROM almalinux:9
 
 # Build arguments
+ARG DNS_SERVERS="8.8.8.8 8.8.4.4"
 ARG JAVA_VERSION=21
 ARG STEAMPIPE_PORT=9193
 ARG GATEWAY_PORT=8080
@@ -117,6 +118,14 @@ RUN useradd -m -s /bin/bash ${USERNAME} \
 
 # Set ownership
 RUN chown -R ${USERNAME}:${USERNAME} /opt/steampipe /opt/gateway
+
+# ============================================
+# DNS (baked per profile)
+# ============================================
+ARG DNS_SERVERS
+RUN for dns in ${DNS_SERVERS}; do echo "nameserver $dns" | tr -d '\r' >> /etc/resolv.conf.wsl; done && \
+    echo '[ -f /etc/resolv.conf.wsl ] && sudo cp -f /etc/resolv.conf.wsl /etc/resolv.conf 2>/dev/null' > /etc/profile.d/00-dns.sh && \
+    chmod +x /etc/profile.d/00-dns.sh
 
 # ============================================
 # Environment

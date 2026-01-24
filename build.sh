@@ -22,8 +22,9 @@ REPO_DIR="$SCRIPT_DIR"
 # Defaults
 PROFILE="${1:-}"
 IMAGE_NAME="steam-engine"
-DOCKER_ARGS=""
+NO_CACHE=""
 VALIDATE=false
+BUILD_ARGS=()
 
 # Colors
 RED='\033[0;31m'
@@ -57,7 +58,7 @@ shift
 for arg in "$@"; do
     case $arg in
         --no-cache)
-            DOCKER_ARGS="--no-cache"
+            NO_CACHE="--no-cache"
             ;;
         --validate)
             VALIDATE=true
@@ -92,59 +93,31 @@ check_binaries() {
     echo "  All binaries present"
 }
 
-# Load build args from profile
+# Load build args from profile into BUILD_ARGS array
 load_build_args() {
-    local args=""
-
-    # Args to skip (only needed for binaries.sh, not Docker)
     local skip_args="GATEWAY_REPO GATEWAY_REF GATEWAY_BUILD_OPTS"
 
-    # Load base args
-    if [ -f "$SCRIPT_DIR/profiles/base.args" ]; then
-        while IFS= read -r line || [ -n "$line" ]; do
-            # Skip comments and empty lines
-            [[ "$line" =~ ^#.*$ ]] && continue
-            [[ -z "$line" ]] && continue
-            # Remove Windows carriage returns
-            line="${line//$'\r'/}"
-            # Extract key
+    for args_file in "$SCRIPT_DIR/profiles/base.args" "$SCRIPT_DIR/profiles/${PROFILE}.args"; do
+        [ -f "$args_file" ] || continue
+        while IFS= read -r line; do
+            line="${line%$'\r'}"
+            [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
             local key="${line%%=*}"
-            # Skip non-Docker args
             [[ "$skip_args" == *"$key"* ]] && continue
-            args="$args --build-arg $line"
-        done < "$SCRIPT_DIR/profiles/base.args"
-    fi
-
-    # Load profile-specific args
-    while IFS= read -r line || [ -n "$line" ]; do
-        [[ "$line" =~ ^#.*$ ]] && continue
-        [[ -z "$line" ]] && continue
-        line="${line//$'\r'/}"
-        local key="${line%%=*}"
-        [[ "$skip_args" == *"$key"* ]] && continue
-        args="$args --build-arg $line"
-    done < "$SCRIPT_DIR/profiles/${PROFILE}.args"
-
-    echo "$args"
+            BUILD_ARGS+=("--build-arg" "$line")
+        done < "$args_file"
+    done
 }
 
 # Build Docker image
 build_image() {
     log_info "Loading profile: $PROFILE"
-
-    local build_args
-    build_args=$(load_build_args)
+    load_build_args
 
     log_info "Building Docker image..."
-
     cd "$SCRIPT_DIR"
 
-    # shellcheck disable=SC2086
-    docker build \
-        $DOCKER_ARGS \
-        $build_args \
-        -t "$IMAGE_NAME:$PROFILE" \
-        .
+    docker build $NO_CACHE -t "$IMAGE_NAME:$PROFILE" "${BUILD_ARGS[@]}" .
 
     echo "  Built: $IMAGE_NAME:$PROFILE"
 }

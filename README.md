@@ -17,10 +17,10 @@ wsl -d steam-engine
 
 ## Profiles
 
-| Profile | Use Case |
-|---------|----------|
-| `vpn` | Laptop/VPN |
-| `lan` | VDI/corporate network |
+| Profile | DNS | Use Case |
+|---------|-----|----------|
+| `vpn` | 8.8.8.8 | Laptop/VPN |
+| `lan` | Corporate | VDI |
 
 ## Project Structure
 
