@@ -1,5 +1,2 @@
-# LAN Profile - Corporate DNS
+# LAN Profile
 # Use when on VDI/corporate network
-
-DNS_PRIMARY=10.1.1.1
-DNS_SECONDARY=10.1.1.2
