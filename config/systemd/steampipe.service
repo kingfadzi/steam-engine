@@ -1,7 +1,8 @@
 [Unit]
 Description=Steampipe SQL Service
 Documentation=https://steampipe.io/docs
-After=network.target
+After=network.target local-fs.target
+RequiresMountsFor=/opt/wsl-secrets
 
 [Service]
 Type=simple
@@ -9,6 +10,7 @@ User=steampipe
 Group=steampipe
 
 Environment=STEAMPIPE_INSTALL_DIR=/opt/steampipe
+Environment=HOME=/opt/steampipe
 WorkingDirectory=/opt/steampipe
 
 ExecStartPre=/opt/init/steampipe.sh

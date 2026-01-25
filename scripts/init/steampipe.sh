@@ -8,15 +8,8 @@ set -e
 INSTALL_DIR="${STEAMPIPE_INSTALL_DIR:-/opt/steampipe}"
 CONFIG_DIR="$INSTALL_DIR/config"
 SECRETS_DIR="/opt/wsl-secrets"
-WIN_SECRETS="${WIN_MOUNT:-/mnt/c/devhome/projects/steamengine}/secrets"
 
 echo "Initializing Steampipe..."
-
-# Create symlink to Windows secrets if not exists
-if [ ! -e "$SECRETS_DIR" ] && [ -d "$WIN_SECRETS" ]; then
-    echo "Creating secrets symlink: $SECRETS_DIR -> $WIN_SECRETS"
-    ln -sf "$WIN_SECRETS" "$SECRETS_DIR"
-fi
 
 # Ensure config directory exists
 mkdir -p "$CONFIG_DIR"
