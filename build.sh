@@ -4,6 +4,7 @@
 #
 # Usage:
 #   ./build.sh <profile>
+#   ./build.sh --docker-test
 #
 # Profiles:
 #   vpn - Public DNS (8.8.8.8) for laptop/VPN use
@@ -14,6 +15,8 @@
 #   ./build.sh vpn --validate
 #   ./build.sh lan --no-cache
 #   ./build.sh vpn --rebuild-base
+#   ./build.sh vpn --debug          # Test exported filesystem (WSL simulation)
+#   ./build.sh --docker-test        # Standalone Docker test (no WSL)
 #
 set -euo pipefail
 
@@ -32,6 +35,8 @@ IMAGE_NAME="steam-engine"
 NO_CACHE=""
 VALIDATE=false
 REBUILD_BASE=false
+DOCKER_TEST=false
+DEBUG_MODE=false
 BUILD_ARGS=()
 
 # Colors
@@ -46,6 +51,7 @@ log_error() { echo -e "${RED}ERROR:${NC} $1"; }
 
 usage() {
     echo "Usage: $0 <profile> [options]"
+    echo "       $0 --docker-test [--no-cache]"
     echo ""
     echo "Profiles:"
     echo "  vpn  - Public DNS (laptop/VPN)"
@@ -55,35 +61,57 @@ usage() {
     echo "  --validate      Run smoke tests before export (recommended)"
     echo "  --no-cache      Force rebuild without cache"
     echo "  --rebuild-base  Force rebuild of wsl-base image"
+    echo "  --debug         Test exported filesystem (simulates WSL import)"
+    echo "  --docker-test   Build standalone test image (no WSL dependencies)"
     exit 1
 }
 
 # Parse arguments
-if [ -z "$PROFILE" ]; then
+# Handle --docker-test as first argument
+if [ "$PROFILE" = "--docker-test" ]; then
+    DOCKER_TEST=true
+    PROFILE=""
+    shift || true
+    for arg in "$@"; do
+        case $arg in
+            --no-cache)
+                NO_CACHE="--no-cache"
+                ;;
+        esac
+    done
+elif [ -z "$PROFILE" ]; then
     usage
+else
+    shift
+    for arg in "$@"; do
+        case $arg in
+            --no-cache)
+                NO_CACHE="--no-cache"
+                ;;
+            --validate)
+                VALIDATE=true
+                ;;
+            --rebuild-base)
+                REBUILD_BASE=true
+                ;;
+            --debug)
+                DEBUG_MODE=true
+                ;;
+            --docker-test)
+                DOCKER_TEST=true
+                ;;
+        esac
+    done
 fi
 
-shift
-for arg in "$@"; do
-    case $arg in
-        --no-cache)
-            NO_CACHE="--no-cache"
-            ;;
-        --validate)
-            VALIDATE=true
-            ;;
-        --rebuild-base)
-            REBUILD_BASE=true
-            ;;
-    esac
-done
-
-# Validate profile
-if [ ! -f "$SCRIPT_DIR/profiles/${PROFILE}.args" ]; then
-    log_error "Profile not found: profiles/${PROFILE}.args"
-    echo "Available profiles:"
-    ls -1 "$SCRIPT_DIR/profiles/"*.args | xargs -n1 basename | sed 's/.args$//'
-    exit 1
+# Validate profile (skip for docker-test mode)
+if [ "$DOCKER_TEST" = false ]; then
+    if [ ! -f "$SCRIPT_DIR/profiles/${PROFILE}.args" ]; then
+        log_error "Profile not found: profiles/${PROFILE}.args"
+        echo "Available profiles:"
+        ls -1 "$SCRIPT_DIR/profiles/"*.args | xargs -n1 basename | sed 's/.args$//'
+        exit 1
+    fi
 fi
 
 # ============================================
@@ -315,6 +343,127 @@ setup_secrets() {
     fi
 }
 
+# ============================================
+# Docker Test Build (no WSL dependencies)
+# ============================================
+docker_test_build() {
+    echo ""
+    echo "============================================"
+    echo "  Steam Engine Docker Test Build"
+    echo "============================================"
+    echo "  Mode: Standalone Docker (no WSL)"
+    echo "  Image: steam-engine:test"
+    echo "============================================"
+    echo ""
+
+    check_binaries
+
+    log_info "Building test Docker image..."
+    cd "$SCRIPT_DIR"
+
+    docker build $NO_CACHE -f Dockerfile.test -t steam-engine:test .
+
+    echo "  Built: steam-engine:test"
+
+    log_info "Running validation..."
+    docker compose -f docker-compose.test.yml --profile validate run --rm validate
+
+    echo ""
+    log_info "Docker test build complete!"
+    echo ""
+    echo "Usage:"
+    echo "  docker compose -f docker-compose.test.yml up        # Start all services"
+    echo "  docker compose -f docker-compose.test.yml up -d     # Start in background"
+    echo "  curl http://localhost:8080/actuator/health          # Check gateway"
+    echo "  pg_isready -h localhost -p 9193                     # Check steampipe"
+}
+
+# Debug mode - test exported filesystem to simulate WSL import
+debug_wsl_image() {
+    echo ""
+    echo "============================================"
+    echo "  Steam Engine WSL Debug Mode"
+    echo "============================================"
+    echo "  Testing exported filesystem (simulates WSL import)"
+    echo "============================================"
+    echo ""
+
+    log_info "Testing exported filesystem (simulates WSL import)..."
+
+    # Create container, export, re-import to simulate WSL
+    local container_id
+    container_id=$(docker create "$IMAGE_NAME:$PROFILE")
+    docker export "$container_id" | docker import - "${IMAGE_NAME}:debug"
+    docker rm "$container_id" > /dev/null
+
+    # Run diagnostics on re-imported image
+    log_info "Running diagnostics on exported filesystem..."
+    echo ""
+
+    docker run --rm "${IMAGE_NAME}:debug" /bin/bash -c '
+        echo "=== Environment Variables ==="
+        echo "STEAMPIPE_INSTALL_DIR=${STEAMPIPE_INSTALL_DIR:-NOT SET}"
+        echo "STEAMPIPE_MOD_LOCATION=${STEAMPIPE_MOD_LOCATION:-NOT SET}"
+        echo "HOME=${HOME:-NOT SET}"
+        echo ""
+        echo "=== /etc/environment ==="
+        cat /etc/environment 2>/dev/null || echo "/etc/environment missing"
+
+        echo ""
+        echo "=== Steampipe Directory Structure ==="
+        ls -la /opt/steampipe/ 2>/dev/null || echo "/opt/steampipe missing"
+
+        echo ""
+        echo "=== Postgres Binaries ==="
+        ls -la /opt/steampipe/db/14.19.0/postgres/bin/ 2>/dev/null || echo "Postgres binaries missing"
+
+        echo ""
+        echo "=== User Configuration ==="
+        id steampipe 2>/dev/null || echo "steampipe user missing"
+        echo "Steampipe home: $(getent passwd steampipe 2>/dev/null | cut -d: -f6)"
+
+        echo ""
+        echo "=== Secrets Directory ==="
+        ls -la /opt/wsl-secrets/ 2>/dev/null || echo "/opt/wsl-secrets missing"
+        echo "fstab entry:"
+        grep wsl-secrets /etc/fstab 2>/dev/null || echo "  No fstab entry for wsl-secrets"
+
+        echo ""
+        echo "=== Systemd Services ==="
+        ls -la /etc/systemd/system/steampipe.service 2>/dev/null || echo "steampipe.service missing"
+        ls -la /etc/systemd/system/gateway.service 2>/dev/null || echo "gateway.service missing"
+
+        echo ""
+        echo "=== Testing Steampipe Binary ==="
+        # Source environment and test as steampipe user
+        su - steampipe -s /bin/bash -c "
+            source /etc/environment 2>/dev/null || true
+            export STEAMPIPE_INSTALL_DIR=/opt/steampipe
+            export HOME=/opt/steampipe
+            /opt/steampipe/steampipe/steampipe --version
+        " 2>&1 || echo "Steampipe binary test failed"
+
+        echo ""
+        echo "=== Validate Mounts Script Test ==="
+        # Source environment for the validation script
+        source /etc/environment 2>/dev/null || true
+        export STEAMPIPE_INSTALL_DIR=/opt/steampipe
+        /opt/init/validate-mounts.sh 2>&1 || echo "Validation script failed (expected - no Windows mount in Docker)"
+    '
+
+    # Cleanup debug image
+    log_info "Cleaning up debug image..."
+    docker rmi "${IMAGE_NAME}:debug" > /dev/null 2>&1 || true
+
+    echo ""
+    log_info "Debug mode complete!"
+    echo ""
+    echo "If all checks passed, the image should work in WSL."
+    echo "To test in actual WSL:"
+    echo "  wsl --import steam-engine-test C:\\wsl\\steam-engine-test ${IMAGE_NAME}-${PROFILE}.tar"
+    echo "  wsl -d steam-engine-test"
+}
+
 # Prompt for WSL import (Windows only)
 prompt_wsl_import() {
     local tarball="$SCRIPT_DIR/${IMAGE_NAME}-${PROFILE}.tar"
@@ -370,6 +519,12 @@ prompt_wsl_import() {
 
 # Main
 main() {
+    # Docker test mode - separate flow
+    if [ "$DOCKER_TEST" = true ]; then
+        docker_test_build
+        return
+    fi
+
     echo ""
     echo "============================================"
     echo "  Steam Engine WSL Builder"
@@ -385,6 +540,12 @@ main() {
 
     if [ "$VALIDATE" = true ]; then
         validate_image
+    fi
+
+    # Debug mode: test exported filesystem instead of normal export
+    if [ "$DEBUG_MODE" = true ]; then
+        debug_wsl_image
+        return
     fi
 
     export_image

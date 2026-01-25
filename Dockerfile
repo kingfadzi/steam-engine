@@ -25,32 +25,47 @@ ARG DEFAULT_USER=fadzi
 RUN dnf install -y postgresql && dnf clean all
 
 # ============================================
+# Service User (create FIRST, before file operations)
+# ============================================
+RUN useradd -r -d /opt/steampipe -s /bin/bash steampipe \
+    && mkdir -p /opt/steampipe /opt/gateway /opt/wsl-secrets
+
+# ============================================
 # Steampipe Bundle
 # ============================================
-COPY binaries/${STEAMPIPE_RELEASE} /tmp/steampipe-bundle.tgz
+COPY --chown=steampipe:steampipe binaries/${STEAMPIPE_RELEASE} /tmp/steampipe-bundle.tgz
 
-RUN mkdir -p /opt/steampipe \
-    && tar -xzf /tmp/steampipe-bundle.tgz -C /opt/steampipe \
+RUN tar -xzf /tmp/steampipe-bundle.tgz -C /opt/steampipe \
     && rm /tmp/steampipe-bundle.tgz \
+    && chown -R steampipe:steampipe /opt/steampipe \
     && chmod +x /opt/steampipe/steampipe/steampipe \
     && ls -la /opt/steampipe/db/14.19.0/postgres/bin/
 
 # Create steampipe config directory
-RUN mkdir -p /opt/steampipe/config
+RUN mkdir -p /opt/steampipe/config \
+    && chown steampipe:steampipe /opt/steampipe/config
 
-# Copy steampipe plugin configs
-COPY config/steampipe/*.spc /opt/steampipe/config/
+# Copy steampipe plugin configs and example env file
+COPY --chown=steampipe:steampipe config/steampipe/*.spc /opt/steampipe/config/
+COPY --chown=steampipe:steampipe config/steampipe/steampipe.env.example /opt/steampipe/config/
 
 ENV STEAMPIPE_INSTALL_DIR=/opt/steampipe
-ENV PATH="/opt/steampipe/steampipe:${PATH}"
+ENV STEAMPIPE_MOD_LOCATION=/opt/steampipe
+ENV PATH="/opt/steampipe/steampipe:/opt/steampipe/bin:${PATH}"
+
+# Persist ENV to /etc/environment for WSL export (docker export loses ENV)
+RUN echo "STEAMPIPE_INSTALL_DIR=/opt/steampipe" >> /etc/environment \
+    && echo "STEAMPIPE_MOD_LOCATION=/opt/steampipe" >> /etc/environment \
+    && echo "PATH=/opt/steampipe/steampipe:/opt/steampipe/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> /etc/environment
 
 # ============================================
 # Gateway Service
 # ============================================
-COPY binaries/${GATEWAY_RELEASE} /opt/gateway/gateway.jar
-COPY config/gateway/application.yml /opt/gateway/application.yml
+COPY --chown=steampipe:steampipe binaries/${GATEWAY_RELEASE} /opt/gateway/gateway.jar
+COPY --chown=steampipe:steampipe config/gateway/application.yml /opt/gateway/application.yml
 
-RUN mkdir -p /opt/gateway/logs
+RUN mkdir -p /opt/gateway/logs \
+    && chown -R steampipe:steampipe /opt/gateway
 
 # ============================================
 # Systemd Services
@@ -86,16 +101,8 @@ RUN chmod +x /usr/local/bin/*.sh
 COPY config/wsl.conf /etc/wsl.conf
 RUN echo "${WIN_MOUNT}/secrets /opt/wsl-secrets none bind,nofail 0 0" > /etc/fstab
 
-# ============================================
-# Service User (owns steampipe/gateway)
-# ============================================
-RUN useradd -r -m -d /opt/steampipe -s /sbin/nologin steampipe
-
-# Create secrets directory (can be replaced with symlink to Windows secrets post-import)
-RUN mkdir -p /opt/wsl-secrets
-
-# Set ownership
-RUN chown -R steampipe:steampipe /opt/steampipe /opt/gateway /opt/wsl-secrets
+# Ensure secrets directory ownership (created earlier with user)
+RUN chown steampipe:steampipe /opt/wsl-secrets
 
 # ============================================
 # Environment

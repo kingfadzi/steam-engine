@@ -13,6 +13,7 @@ Environment=STEAMPIPE_INSTALL_DIR=/opt/steampipe
 Environment=HOME=/opt/steampipe
 WorkingDirectory=/opt/steampipe
 
+ExecStartPre=/opt/init/validate-mounts.sh
 ExecStartPre=/opt/init/steampipe.sh
 ExecStart=/opt/init/steampipe-start.sh
 

@@ -1,21 +1,14 @@
 #!/bin/bash
-# Load steam-engine secrets from Windows mount
+# Load steam-engine secrets from Windows mount (for interactive shells)
 #
-# Secrets directory: /opt/wsl-secrets/
-# Symlinked to Windows: C:\devhome\projects\steamengine\secrets\
+# Secrets are mounted via fstab at boot:
+#   /mnt/c/devhome/projects/steamengine/secrets -> /opt/wsl-secrets
 #
 # Expected files:
 #   steampipe.env - Jira/GitLab/Bitbucket credentials
-#   gateway.env   - DW connection settings
+#   gateway.env   - DW connection settings (optional)
 
 SECRETS_DIR="/opt/wsl-secrets"
-WIN_SECRETS="${WIN_MOUNT:-/mnt/c/devhome/projects/steamengine}/secrets"
-
-# Create symlink to Windows secrets if not exists
-if [ ! -L "$SECRETS_DIR" ] && [ -d "$WIN_SECRETS" ]; then
-    sudo mkdir -p "$(dirname "$SECRETS_DIR")" 2>/dev/null
-    sudo ln -sf "$WIN_SECRETS" "$SECRETS_DIR" 2>/dev/null || true
-fi
 
 # Load steampipe secrets
 if [ -f "$SECRETS_DIR/steampipe.env" ]; then
