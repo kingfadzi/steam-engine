@@ -27,8 +27,17 @@ fi
 
 echo "Installing from: $BUNDLE_PATH"
 
-# Extract bundle
-sudo tar -xzf "$BUNDLE_PATH" -C "$INSTALL_DIR"
+# Copy bundle into WSL first (bypasses Defender which scans /mnt/c directly)
+TEMP_BUNDLE="/tmp/steampipe-bundle.tgz"
+echo "Copying bundle into WSL..."
+cp "$BUNDLE_PATH" "$TEMP_BUNDLE"
+
+# Extract from local copy
+echo "Extracting bundle..."
+sudo tar -xzf "$TEMP_BUNDLE" -C "$INSTALL_DIR"
+
+# Clean up temp file
+rm -f "$TEMP_BUNDLE"
 sudo chown -R steampipe:steampipe "$INSTALL_DIR"
 sudo chmod +x "$INSTALL_DIR/steampipe/steampipe"
 
