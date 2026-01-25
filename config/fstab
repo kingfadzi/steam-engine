@@ -1,3 +1,0 @@
-# Steam Engine mounts
-# Windows secrets directory (nofail = silent if missing)
-WIN_MOUNT_PLACEHOLDER/secrets /opt/wsl-secrets none bind,nofail 0 0

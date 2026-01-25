@@ -83,8 +83,7 @@ RUN chmod +x /usr/local/bin/*.sh
 # WSL Configuration (override base if needed)
 # ============================================
 COPY config/wsl.conf /etc/wsl.conf
-COPY config/fstab /etc/fstab
-RUN sed -i "s|WIN_MOUNT_PLACEHOLDER|${WIN_MOUNT}|g" /etc/fstab
+RUN echo "${WIN_MOUNT}/secrets /opt/wsl-secrets none bind,nofail 0 0" > /etc/fstab
 
 # ============================================
 # Service User (owns steampipe/gateway)
