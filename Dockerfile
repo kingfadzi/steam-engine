@@ -41,7 +41,7 @@ RUN mkdir -p /opt/steampipe/config
 COPY config/steampipe/*.spc /opt/steampipe/config/
 
 ENV STEAMPIPE_INSTALL_DIR=/opt/steampipe
-ENV PATH="/opt/steampipe/steampipe:/opt/steampipe/bin:${PATH}"
+ENV PATH="/opt/steampipe/steampipe:${PATH}"
 
 # ============================================
 # Gateway Service
@@ -68,10 +68,10 @@ RUN chmod +x /opt/init/*.sh
 
 # ============================================
 # Profile Scripts (steam-engine specific)
-# Numbered 06-07 to run after base's 00-05
+# Numbered 06-08 to run after base's 00-05
 # ============================================
 COPY scripts/profile.d/*.sh /etc/profile.d/
-RUN chmod 644 /etc/profile.d/06-*.sh /etc/profile.d/07-*.sh
+RUN chmod 644 /etc/profile.d/06-*.sh /etc/profile.d/07-*.sh /etc/profile.d/08-*.sh
 
 # ============================================
 # Utility Scripts

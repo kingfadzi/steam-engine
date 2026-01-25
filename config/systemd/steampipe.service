@@ -14,7 +14,7 @@ EnvironmentFile=-/opt/wsl-secrets/steampipe.env
 WorkingDirectory=/opt/steampipe
 
 ExecStartPre=/opt/init/steampipe.sh
-ExecStart=/opt/steampipe/bin/start
+ExecStart=/opt/steampipe/steampipe/steampipe service start --foreground
 
 ExecStop=/opt/steampipe/steampipe/steampipe service stop
 
