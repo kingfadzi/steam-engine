@@ -84,6 +84,7 @@ RUN chmod +x /usr/local/bin/*.sh
 # ============================================
 COPY config/wsl.conf /etc/wsl.conf
 COPY config/fstab /etc/fstab
+RUN sed -i "s|WIN_MOUNT_PLACEHOLDER|${WIN_MOUNT}|g" /etc/fstab
 
 # ============================================
 # Service User (owns steampipe/gateway)
