@@ -10,6 +10,19 @@ PG_BIN="/opt/steampipe/db/14.19.0/postgres/bin"
 
 echo "=== Steampipe Pre-Start Validation ==="
 
+# Check if steampipe is installed (bundle must be installed post-import)
+if [ ! -x "/opt/steampipe/steampipe/steampipe" ]; then
+    echo ""
+    echo "ERROR: Steampipe not installed!"
+    echo ""
+    echo "Run the installer:"
+    echo "  install-steampipe.sh"
+    echo ""
+    echo "Or with custom bundle path:"
+    echo "  install-steampipe.sh /mnt/c/path/to/steampipe-bundle.tgz"
+    exit 1
+fi
+
 # Validate secrets mount
 if [ ! -d "$SECRETS_DIR" ]; then
     echo "ERROR: Secrets directory missing: $SECRETS_DIR"

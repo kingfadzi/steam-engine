@@ -12,7 +12,6 @@ FROM wsl-base:${PROFILE}
 USER root
 
 # Build arguments (steam-engine specific)
-ARG STEAMPIPE_RELEASE=steampipe-bundle.tgz
 ARG GATEWAY_RELEASE=gateway.jar
 ARG STEAMPIPE_PORT=9193
 ARG GATEWAY_PORT=8080
@@ -31,19 +30,15 @@ RUN useradd -r -d /opt/steampipe -s /bin/bash steampipe \
     && mkdir -p /opt/steampipe /opt/gateway /opt/wsl-secrets
 
 # ============================================
-# Steampipe Bundle
+# Steampipe Directory Structure (bundle installed post-import)
 # ============================================
-COPY --chown=steampipe:steampipe binaries/${STEAMPIPE_RELEASE} /tmp/steampipe-bundle.tgz
-
-RUN tar -xzf /tmp/steampipe-bundle.tgz -C /opt/steampipe \
-    && rm /tmp/steampipe-bundle.tgz \
-    && chown -R steampipe:steampipe /opt/steampipe \
-    && chmod +x /opt/steampipe/steampipe/steampipe \
-    && ls -la /opt/steampipe/db/14.19.0/postgres/bin/
-
-# Create steampipe config directory
-RUN mkdir -p /opt/steampipe/config \
-    && chown steampipe:steampipe /opt/steampipe/config
+# Bundle is NOT baked into image - Windows Defender strips binaries during WSL import.
+# User runs install-steampipe.sh after import to copy bundle from Windows filesystem.
+RUN mkdir -p /opt/steampipe/steampipe \
+    /opt/steampipe/db \
+    /opt/steampipe/config \
+    /opt/steampipe/plugins \
+    && chown -R steampipe:steampipe /opt/steampipe
 
 # Copy steampipe plugin configs and example env file
 COPY --chown=steampipe:steampipe config/steampipe/*.spc /opt/steampipe/config/
@@ -87,7 +82,7 @@ RUN chmod +x /opt/init/*.sh
 # Numbered 06-08 to run after base's 00-05
 # ============================================
 COPY scripts/profile.d/*.sh /etc/profile.d/
-RUN chmod 644 /etc/profile.d/06-*.sh /etc/profile.d/07-*.sh /etc/profile.d/08-*.sh
+RUN chmod 644 /etc/profile.d/01-*.sh /etc/profile.d/06-*.sh /etc/profile.d/07-*.sh /etc/profile.d/08-*.sh
 
 # ============================================
 # Utility Scripts
