@@ -200,7 +200,8 @@ build_image() {
     log_info "Building Docker image..."
     cd "$SCRIPT_DIR"
 
-    docker build $NO_CACHE -t "$IMAGE_NAME:$PROFILE" "${BUILD_ARGS[@]}" .
+    # MSYS_NO_PATHCONV=1 prevents Git Bash from mangling /mnt/c paths
+    MSYS_NO_PATHCONV=1 docker build $NO_CACHE -t "$IMAGE_NAME:$PROFILE" "${BUILD_ARGS[@]}" .
 
     echo "  Built: $IMAGE_NAME:$PROFILE"
 }
@@ -361,7 +362,8 @@ docker_test_build() {
     log_info "Building test Docker image..."
     cd "$SCRIPT_DIR"
 
-    docker build $NO_CACHE -f Dockerfile.test -t steam-engine:test .
+    # MSYS_NO_PATHCONV=1 prevents Git Bash from mangling /mnt/c paths
+    MSYS_NO_PATHCONV=1 docker build $NO_CACHE -f Dockerfile.test -t steam-engine:test .
 
     echo "  Built: steam-engine:test"
 
