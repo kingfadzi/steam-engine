@@ -12,6 +12,8 @@ FROM wsl-base:${PROFILE}
 USER root
 
 # Build arguments (steam-engine specific)
+ARG STEAMPIPE_RELEASE=steampipe-bundle.tgz
+ARG GATEWAY_RELEASE=gateway.jar
 ARG STEAMPIPE_PORT=9193
 ARG GATEWAY_PORT=8080
 ARG WIN_MOUNT=/mnt/c/devhome/projects/steamengine
@@ -25,7 +27,7 @@ RUN dnf install -y postgresql && dnf clean all
 # ============================================
 # Steampipe Bundle
 # ============================================
-COPY binaries/steampipe-bundle.tgz /tmp/
+COPY binaries/${STEAMPIPE_RELEASE} /tmp/steampipe-bundle.tgz
 
 RUN mkdir -p /opt/steampipe \
     && tar -xzf /tmp/steampipe-bundle.tgz -C /opt/steampipe \
@@ -44,7 +46,7 @@ ENV PATH="/opt/steampipe/steampipe:/opt/steampipe/bin:${PATH}"
 # ============================================
 # Gateway Service
 # ============================================
-COPY binaries/gateway.jar /opt/gateway/gateway.jar
+COPY binaries/${GATEWAY_RELEASE} /opt/gateway/gateway.jar
 COPY config/gateway/application.yml /opt/gateway/application.yml
 
 RUN mkdir -p /opt/gateway/logs

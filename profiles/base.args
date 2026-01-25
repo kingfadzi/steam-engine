@@ -1,17 +1,11 @@
-# Steam Engine specific build arguments
-# Base system args (Java, Python, DNS, etc.) are in wsl-base
+# Binaries (local files in binaries/)
+STEAMPIPE_RELEASE=steampipe-bundle.tgz
+GATEWAY_RELEASE=gateway.jar
 
-# Ports
+# Service ports
 STEAMPIPE_PORT=9193
 GATEWAY_PORT=8080
 
-# Gateway source (cloned and built during binaries.sh)
-GATEWAY_REPO=git@github.com:kingfadzi/gateway.git
-GATEWAY_REF=main
-GATEWAY_BUILD_OPTS=-DskipTests -q
-
 # Windows integration
 WIN_MOUNT=/mnt/c/devhome/projects/steamengine
-
-# Default login user (must match wsl-base)
 DEFAULT_USER=fadzi

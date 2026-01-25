@@ -147,7 +147,7 @@ check_binaries() {
 
 # Load build args from profile into BUILD_ARGS array
 load_build_args() {
-    local skip_args="GATEWAY_REPO GATEWAY_REF GATEWAY_BUILD_OPTS"
+    local skip_args=""
 
     # Always pass PROFILE as first arg
     BUILD_ARGS+=("--build-arg" "PROFILE=$PROFILE")
