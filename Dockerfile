@@ -32,7 +32,8 @@ COPY binaries/${STEAMPIPE_RELEASE} /tmp/steampipe-bundle.tgz
 RUN mkdir -p /opt/steampipe \
     && tar -xzf /tmp/steampipe-bundle.tgz -C /opt/steampipe \
     && rm /tmp/steampipe-bundle.tgz \
-    && chmod +x /opt/steampipe/steampipe/steampipe
+    && chmod +x /opt/steampipe/steampipe/steampipe \
+    && ls -la /opt/steampipe/db/14.19.0/postgres/bin/
 
 # Create steampipe config directory
 RUN mkdir -p /opt/steampipe/config
