@@ -9,12 +9,10 @@ User=steampipe
 Group=steampipe
 
 Environment=STEAMPIPE_INSTALL_DIR=/opt/steampipe
-EnvironmentFile=-/opt/wsl-secrets/steampipe.env
-
 WorkingDirectory=/opt/steampipe
 
 ExecStartPre=/opt/init/steampipe.sh
-ExecStart=/opt/steampipe/steampipe/steampipe service start --foreground
+ExecStart=/opt/init/steampipe-start.sh
 
 ExecStop=/opt/steampipe/steampipe/steampipe service stop
 
