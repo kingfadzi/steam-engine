@@ -5,7 +5,21 @@
 #
 set -e
 
+SECRETS_DIR="/opt/wsl-secrets"
+
 echo "Initializing Gateway..."
+
+# Source environment files (symlink created by steampipe-start.sh)
+if [ -f "$SECRETS_DIR/steampipe.env" ]; then
+    set -a
+    source "$SECRETS_DIR/steampipe.env"
+    set +a
+fi
+if [ -f "$SECRETS_DIR/gateway.env" ]; then
+    set -a
+    source "$SECRETS_DIR/gateway.env"
+    set +a
+fi
 
 # Check for required environment variables
 check_env() {
