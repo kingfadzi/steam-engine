@@ -14,10 +14,7 @@ EnvironmentFile=-/opt/wsl-secrets/steampipe.env
 WorkingDirectory=/opt/steampipe
 
 ExecStartPre=/opt/init/steampipe.sh
-ExecStart=/opt/steampipe/steampipe/steampipe service start \
-    --database-listen=network \
-    --database-port=9193 \
-    --foreground
+ExecStart=/opt/steampipe/bin/start
 
 ExecStop=/opt/steampipe/steampipe/steampipe service stop
 
