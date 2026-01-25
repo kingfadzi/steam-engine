@@ -87,7 +87,7 @@ COPY config/wsl.conf /etc/wsl.conf
 # ============================================
 # Service User (owns steampipe/gateway)
 # ============================================
-RUN useradd -r -s /sbin/nologin steampipe
+RUN useradd -r -m -d /opt/steampipe -s /sbin/nologin steampipe
 
 # Set ownership
 RUN chown -R steampipe:steampipe /opt/steampipe /opt/gateway

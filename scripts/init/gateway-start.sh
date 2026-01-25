@@ -6,6 +6,18 @@
 set -e
 
 SECRETS_DIR="/opt/wsl-secrets"
+WIN_SECRETS="${WIN_MOUNT:-/mnt/c/devhome/projects/steamengine}/secrets"
+
+# Create symlink to Windows secrets, or create directory if Windows folder missing
+if [ ! -e "$SECRETS_DIR" ]; then
+    if [ -d "$WIN_SECRETS" ]; then
+        ln -sf "$WIN_SECRETS" "$SECRETS_DIR"
+    else
+        mkdir -p "$SECRETS_DIR"
+        echo "WARNING: Windows secrets dir not found: $WIN_SECRETS"
+        echo "Created empty: $SECRETS_DIR"
+    fi
+fi
 
 # Source environment files
 if [ -f "$SECRETS_DIR/steampipe.env" ]; then
