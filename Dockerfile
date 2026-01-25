@@ -83,6 +83,7 @@ RUN chmod +x /usr/local/bin/*.sh
 # WSL Configuration (override base if needed)
 # ============================================
 COPY config/wsl.conf /etc/wsl.conf
+COPY config/fstab /etc/fstab
 
 # ============================================
 # Service User (owns steampipe/gateway)
