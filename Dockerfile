@@ -89,8 +89,11 @@ COPY config/wsl.conf /etc/wsl.conf
 # ============================================
 RUN useradd -r -m -d /opt/steampipe -s /sbin/nologin steampipe
 
+# Create secrets directory (can be replaced with symlink to Windows secrets post-import)
+RUN mkdir -p /opt/wsl-secrets
+
 # Set ownership
-RUN chown -R steampipe:steampipe /opt/steampipe /opt/gateway
+RUN chown -R steampipe:steampipe /opt/steampipe /opt/gateway /opt/wsl-secrets
 
 # ============================================
 # Environment
