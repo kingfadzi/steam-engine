@@ -292,40 +292,79 @@ validate_image() {
     log_info "All validation tests passed"
 }
 
-# Prompt for WSL import (Windows only)
-prompt_wsl_import() {
-    # Check if running in Git Bash / MSYS
-    if [ -z "${MSYSTEM:-}" ]; then
+# Copy secrets example to Windows location
+setup_secrets() {
+    local win_secrets_dir="${WIN_MOUNT:-/mnt/c/devhome/projects/steamengine}/secrets"
+    local example_file="$SCRIPT_DIR/config/steampipe/steampipe.env.example"
+
+    # Only run on Windows
+    if [[ "$OSTYPE" != "msys" && "$OSTYPE" != "cygwin" && -z "${WINDIR:-}" ]]; then
         return
     fi
 
-    log_info "WSL Import"
-    echo ""
-    echo "To import into WSL, run in PowerShell:"
-    echo ""
-    echo "  wsl --unregister $IMAGE_NAME  # if exists"
-    echo "  wsl --import $IMAGE_NAME C:\\wsl\\$IMAGE_NAME ${IMAGE_NAME}-${PROFILE}.tar"
-    echo ""
-    echo "Then start with:"
-    echo "  wsl -d $IMAGE_NAME"
-    echo ""
+    if [[ ! -d "$win_secrets_dir" ]]; then
+        log_info "Creating secrets directory..."
+        mkdir -p "$win_secrets_dir"
+    fi
 
-    read -p "Import now? [y/N] " -n 1 -r
+    if [[ ! -f "$win_secrets_dir/steampipe.env" ]]; then
+        log_info "Copying steampipe.env.example to secrets directory..."
+        cp "$example_file" "$win_secrets_dir/steampipe.env.example"
+        echo "  Edit: $(cygpath -w "$win_secrets_dir/steampipe.env.example")"
+        echo "  Then rename to steampipe.env"
+    fi
+}
+
+# Prompt for WSL import (Windows only)
+prompt_wsl_import() {
+    local tarball="$SCRIPT_DIR/${IMAGE_NAME}-${PROFILE}.tar"
+    local install_path="C:\\wsl\\$IMAGE_NAME"
+
+    # Check if running on Windows (Git Bash / MSYS)
+    if [[ "$OSTYPE" != "msys" && "$OSTYPE" != "cygwin" && -z "${WINDIR:-}" ]]; then
+        echo ""
+        echo "To import on Windows:"
+        echo "  wsl --import $IMAGE_NAME $install_path ${IMAGE_NAME}-${PROFILE}.tar --version 2"
+        return
+    fi
+
+    echo ""
+    read -p "Import to WSL as '$IMAGE_NAME'? (y/N) " -n 1 -r
     echo
+
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        local tarball
-        tarball=$(wslpath -w "$SCRIPT_DIR/${IMAGE_NAME}-${PROFILE}.tar")
+        local tarball_win
+        tarball_win=$(cygpath -w "$tarball")
 
         # Check if distro exists
-        if wsl.exe -l -q 2>/dev/null | grep -q "^${IMAGE_NAME}$"; then
-            log_warn "Distro '$IMAGE_NAME' exists. Unregistering..."
-            wsl.exe --unregister "$IMAGE_NAME"
+        if wsl.exe --list --quiet 2>/dev/null | grep -q "^${IMAGE_NAME}$"; then
+            echo "Distribution '$IMAGE_NAME' already exists."
+            read -p "Unregister and replace? (y/N) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                log_info "Unregistering $IMAGE_NAME..."
+                wsl.exe --unregister "$IMAGE_NAME"
+            else
+                echo "Aborted."
+                return
+            fi
         fi
 
-        log_info "Importing WSL distro..."
-        wsl.exe --import "$IMAGE_NAME" "C:\\wsl\\$IMAGE_NAME" "$tarball"
+        log_info "Importing to WSL..."
+        echo "  Name: $IMAGE_NAME"
+        echo "  Path: $install_path"
 
-        log_info "Done! Start with: wsl -d $IMAGE_NAME"
+        # Create directory and import
+        mkdir -p "$(cygpath "$install_path")" 2>/dev/null || true
+        wsl.exe --import "$IMAGE_NAME" "$install_path" "$tarball_win" --version 2
+
+        echo ""
+        log_info "Import complete!"
+        echo "To start: wsl -d $IMAGE_NAME"
+    else
+        echo ""
+        echo "To import later:"
+        echo "  wsl --import $IMAGE_NAME $install_path ${IMAGE_NAME}-${PROFILE}.tar --version 2"
     fi
 }
 
@@ -349,6 +388,7 @@ main() {
     fi
 
     export_image
+    setup_secrets
     prompt_wsl_import
 
     echo ""

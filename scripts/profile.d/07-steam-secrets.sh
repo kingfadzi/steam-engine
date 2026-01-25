@@ -1,16 +1,14 @@
 #!/bin/bash
 # Load steam-engine secrets from Windows mount
 #
-# Secrets directory: /opt/steam-secrets/
+# Secrets directory: /opt/wsl-secrets/
 # Symlinked to Windows: C:\devhome\projects\steamengine\secrets\
 #
 # Expected files:
 #   steampipe.env - Jira/GitLab/Bitbucket credentials
 #   gateway.env   - DW connection settings
-#
-# Note: This is separate from wsl-base's /opt/wsl-secrets
 
-SECRETS_DIR="/opt/steam-secrets"
+SECRETS_DIR="/opt/wsl-secrets"
 WIN_SECRETS="${WIN_MOUNT:-/mnt/c/devhome/projects/steamengine}/secrets"
 
 # Create symlink to Windows secrets if not exists
