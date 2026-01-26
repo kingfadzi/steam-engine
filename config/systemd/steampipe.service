@@ -1,8 +1,9 @@
 [Unit]
 Description=Steampipe SQL Service
 Documentation=https://steampipe.io/docs
-After=network.target local-fs.target
-RequiresMountsFor=/opt/wsl-secrets
+After=network.target local-fs.target opt-steampipe-db-14.19.0-postgres.mount
+Requires=opt-steampipe-db-14.19.0-postgres.mount
+RequiresMountsFor=/opt/wsl-secrets /opt/steampipe/db/14.19.0/postgres
 
 [Service]
 Type=simple

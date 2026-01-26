@@ -45,11 +45,8 @@ RUN cp /opt/steampipe/fdw/steampipe_postgres_fdw.so /usr/pgsql-14/lib/steampipe_
     && cp /opt/steampipe/fdw/steampipe_postgres_fdw.control /usr/pgsql-14/share/extension/ \
     && rm -rf /opt/steampipe/fdw
 
-# Symlink steampipe db/ to RPM postgres
-RUN ln -sf /usr/pgsql-14/bin /opt/steampipe/db/14.19.0/postgres/bin \
-    && ln -sf /usr/pgsql-14/lib /opt/steampipe/db/14.19.0/postgres/lib \
-    && ln -sf /usr/pgsql-14/share /opt/steampipe/db/14.19.0/postgres/share \
-    && mkdir -p /opt/steampipe/db/14.19.0/postgres/data \
+# Create mount point for RPM postgres (bind mounted at runtime)
+RUN mkdir -p /opt/steampipe/db/14.19.0/postgres \
     && chown -R steampipe:steampipe /opt/steampipe/db
 
 # Mask RPM postgres service to prevent conflicts
@@ -88,8 +85,9 @@ RUN mkdir -p /opt/gateway/logs \
 # ============================================
 COPY config/systemd/steampipe.service /etc/systemd/system/
 COPY config/systemd/gateway.service /etc/systemd/system/
+COPY config/systemd/opt-steampipe-db-14.19.0-postgres.mount /etc/systemd/system/
 
-RUN systemctl enable steampipe.service gateway.service
+RUN systemctl enable steampipe.service gateway.service opt-steampipe-db-14.19.0-postgres.mount
 
 # ============================================
 # Initialization Scripts
