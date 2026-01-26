@@ -29,15 +29,16 @@ RUN dnf install -y /tmp/postgres/*.rpm telnet \
 # ============================================
 # Install FDW extension to RPM postgres
 # ============================================
-# Steampipe expects: lib/postgresql/steampipe_postgres_fdw.so
-#                    share/postgresql/extension/steampipe_postgres_fdw*
+# Steampipe expects FDW at: <pg_dir>/lib/steampipe_postgres_fdw.so
+#                           <pg_dir>/share/extension/steampipe_postgres_fdw*
+# (NOT lib/postgresql/ or share/postgresql/extension/)
 COPY binaries/steampipe-bundle.tgz /tmp/steampipe-bundle.tgz
-RUN mkdir -p /usr/pgsql-14/lib/postgresql /usr/pgsql-14/share/postgresql/extension \
+RUN mkdir -p /usr/pgsql-14/lib /usr/pgsql-14/share/extension \
     && mkdir -p /tmp/fdw-extract \
     && tar -xzf /tmp/steampipe-bundle.tgz -C /tmp/fdw-extract --wildcards '*/fdw/*' \
-    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw.so /usr/pgsql-14/lib/postgresql/ \
-    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/postgresql/extension/ \
-    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw.control /usr/pgsql-14/share/postgresql/extension/ \
+    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw.so /usr/pgsql-14/lib/ \
+    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/extension/ \
+    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw.control /usr/pgsql-14/share/extension/ \
     && rm -rf /tmp/fdw-extract
 
 # Mask RPM postgres service to prevent conflicts
