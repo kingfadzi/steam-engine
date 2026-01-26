@@ -119,12 +119,9 @@ COPY --from=steampipe-builder /usr/local/bin/steampipe /usr/local/bin/steampipe
 COPY --from=steampipe-builder /home/builder/.steampipe /home/${DEFAULT_USER}/.steampipe
 
 # ============================================
-# Symlink RPM postgres to where steampipe expects it
+# Mount point for RPM postgres (bind mount in fstab)
 # ============================================
-RUN mkdir -p /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres \
-    && ln -s /usr/pgsql-14/bin /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres/bin \
-    && ln -s /usr/pgsql-14/lib /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres/lib \
-    && ln -s /usr/pgsql-14/share /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres/share
+RUN mkdir -p /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres
 
 # Create versions.json so steampipe thinks DB is installed
 RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"}}' \
@@ -175,8 +172,9 @@ RUN sed -i 's/\r$//' /home/${DEFAULT_USER}/.local/bin/*.sh \
 # Set ownership
 RUN chown -R ${DEFAULT_USER}:${DEFAULT_USER} /home/${DEFAULT_USER}
 
-# fstab for secrets mount
-RUN echo "${WIN_MOUNT}/secrets /home/${DEFAULT_USER}/.secrets none bind,nofail 0 0" > /etc/fstab
+# fstab for mounts
+RUN echo "${WIN_MOUNT}/secrets /home/${DEFAULT_USER}/.secrets none bind,nofail 0 0" > /etc/fstab \
+    && echo "/usr/pgsql-14 /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres none bind 0 0" >> /etc/fstab
 
 # ============================================
 # Environment

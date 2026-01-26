@@ -57,17 +57,17 @@ download_binary "Steampipe CLI v${STEAMPIPE_VERSION}" \
     "$STEAMPIPE_URL" \
     "steampipe_linux_amd64.tar.gz"
 
-# PostgreSQL 14 RPMs
-download_binary "PostgreSQL 14 Server" \
-    "${PGDG_BASE_URL}/postgresql14-server-14.15-1PGDG.rhel9.x86_64.rpm" \
+# PostgreSQL 14.19 RPMs (matches steampipe expected version)
+download_binary "PostgreSQL 14.19 Server" \
+    "${PGDG_BASE_URL}/postgresql14-server-14.19-1PGDG.rhel9.x86_64.rpm" \
     "postgresql14-server.rpm"
 
-download_binary "PostgreSQL 14 Libs" \
-    "${PGDG_BASE_URL}/postgresql14-libs-14.15-1PGDG.rhel9.x86_64.rpm" \
+download_binary "PostgreSQL 14.19 Libs" \
+    "${PGDG_BASE_URL}/postgresql14-libs-14.19-1PGDG.rhel9.x86_64.rpm" \
     "postgresql14-libs.rpm"
 
-download_binary "PostgreSQL 14 Client" \
-    "${PGDG_BASE_URL}/postgresql14-14.15-1PGDG.rhel9.x86_64.rpm" \
+download_binary "PostgreSQL 14.19 Client" \
+    "${PGDG_BASE_URL}/postgresql14-14.19-1PGDG.rhel9.x86_64.rpm" \
     "postgresql14.rpm"
 
 # FDW

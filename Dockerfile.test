@@ -39,11 +39,12 @@ COPY binaries/steampipe_linux_amd64.tar.gz /tmp/
 RUN tar -xzf /tmp/steampipe_linux_amd64.tar.gz -C /usr/local/bin \
     && rm /tmp/steampipe_linux_amd64.tar.gz
 
-# 4. Symlink RPM postgres to where steampipe expects it
+# 4. Copy RPM postgres to steampipe expected location
+# (In WSL, this will be a bind mount instead - see /etc/fstab)
 RUN mkdir -p /home/builder/.steampipe/db/14.19.0/postgres \
-    && ln -s /usr/pgsql-14/bin /home/builder/.steampipe/db/14.19.0/postgres/bin \
-    && ln -s /usr/pgsql-14/lib /home/builder/.steampipe/db/14.19.0/postgres/lib \
-    && ln -s /usr/pgsql-14/share /home/builder/.steampipe/db/14.19.0/postgres/share
+    && cp -a /usr/pgsql-14/bin /home/builder/.steampipe/db/14.19.0/postgres/ \
+    && cp -a /usr/pgsql-14/lib /home/builder/.steampipe/db/14.19.0/postgres/ \
+    && cp -a /usr/pgsql-14/share /home/builder/.steampipe/db/14.19.0/postgres/
 
 # 5. Database versions.json
 RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"}}' \
@@ -78,9 +79,8 @@ RUN chown -R builder:builder /home/builder/.steampipe
 
 USER builder
 
-# Verify
-RUN steampipe plugin list
-RUN ls -la ~/.steampipe/db/14.19.0/postgres/bin/
+# Verify symlinks (don't run steampipe commands - they download embedded postgres)
+RUN ls -la ~/.steampipe/db/14.19.0/postgres/
 RUN ls -la ~/.steampipe/plugins/
 
 CMD ["steampipe", "service", "start", "--foreground"]
