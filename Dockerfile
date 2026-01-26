@@ -96,9 +96,12 @@ ARG DEFAULT_USER=fadzi
 COPY binaries/postgresql14-libs.rpm /tmp/
 COPY binaries/postgresql14.rpm /tmp/
 COPY binaries/postgresql14-server.rpm /tmp/
+COPY binaries/postgresql14-contrib.rpm /tmp/
 
-RUN dnf install -y /tmp/postgresql14-libs.rpm /tmp/postgresql14.rpm /tmp/postgresql14-server.rpm \
-    && rm /tmp/postgresql14*.rpm
+RUN dnf install -y /tmp/postgresql14-libs.rpm /tmp/postgresql14.rpm /tmp/postgresql14-server.rpm /tmp/postgresql14-contrib.rpm \
+    && rm /tmp/postgresql14*.rpm \
+    && mkdir -p /run/postgresql \
+    && chown ${DEFAULT_USER}:${DEFAULT_USER} /run/postgresql
 
 # ============================================
 # Install FDW Extension into RPM postgres
@@ -107,9 +110,15 @@ COPY binaries/steampipe_postgres_fdw.so.gz /tmp/
 COPY binaries/steampipe_postgres_fdw.control /tmp/
 COPY binaries/steampipe_postgres_fdw--1.0.sql /tmp/
 
-RUN gunzip -c /tmp/steampipe_postgres_fdw.so.gz > /usr/pgsql-14/lib/steampipe_postgres_fdw.so \
+# Install FDW to both postgres paths (for postgres) and steampipe paths (for steampipe check)
+RUN mkdir -p /usr/pgsql-14/lib/postgresql \
+    && mkdir -p /usr/pgsql-14/share/postgresql/extension \
+    && gunzip -c /tmp/steampipe_postgres_fdw.so.gz > /usr/pgsql-14/lib/steampipe_postgres_fdw.so \
     && cp /tmp/steampipe_postgres_fdw.control /usr/pgsql-14/share/extension/ \
     && cp /tmp/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/extension/ \
+    && ln -s /usr/pgsql-14/lib/steampipe_postgres_fdw.so /usr/pgsql-14/lib/postgresql/steampipe_postgres_fdw.so \
+    && ln -s /usr/pgsql-14/share/extension/steampipe_postgres_fdw.control /usr/pgsql-14/share/postgresql/extension/ \
+    && ln -s /usr/pgsql-14/share/extension/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/postgresql/extension/ \
     && rm /tmp/steampipe_postgres_fdw.* \
     && chown -R ${DEFAULT_USER}:${DEFAULT_USER} /usr/pgsql-14
 
@@ -124,8 +133,8 @@ COPY --from=steampipe-builder /home/builder/.steampipe /home/${DEFAULT_USER}/.st
 # ============================================
 RUN mkdir -p /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres
 
-# Create versions.json with correct digest so steampipe doesn't reinstall
-RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","image_digest":"sha256:84264ef41853178707bccb091f5450c22e835f8a98f9961592c75690321093d9","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"}}' \
+# Create versions.json with correct structure so steampipe doesn't reinstall
+RUN echo '{"embedded_db":{"name":"embeddedDB","version":"14.19.0","image_digest":"sha256:84264ef41853178707bccb091f5450c22e835f8a98f9961592c75690321093d9","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"},"struct_version":20220411}' \
     > /home/${DEFAULT_USER}/.steampipe/db/versions.json
 
 # Fix ownership

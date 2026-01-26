@@ -164,6 +164,7 @@ check_binaries() {
         "postgresql14-libs.rpm"
         "postgresql14.rpm"
         "postgresql14-server.rpm"
+        "postgresql14-contrib.rpm"
         "steampipe_postgres_fdw.so.gz"
         "steampipe_postgres_fdw.control"
         "steampipe_postgres_fdw--1.0.sql"

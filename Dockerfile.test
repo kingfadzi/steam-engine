@@ -20,18 +20,27 @@ WORKDIR /home/builder
 COPY binaries/postgresql14-libs.rpm /tmp/
 COPY binaries/postgresql14.rpm /tmp/
 COPY binaries/postgresql14-server.rpm /tmp/
+COPY binaries/postgresql14-contrib.rpm /tmp/
 
-RUN dnf install -y /tmp/postgresql14-libs.rpm /tmp/postgresql14.rpm /tmp/postgresql14-server.rpm \
-    && rm /tmp/postgresql14*.rpm
+RUN dnf install -y /tmp/postgresql14-libs.rpm /tmp/postgresql14.rpm /tmp/postgresql14-server.rpm /tmp/postgresql14-contrib.rpm \
+    && rm /tmp/postgresql14*.rpm \
+    && mkdir -p /run/postgresql \
+    && chown builder:builder /run/postgresql
 
 # 2. Install FDW Extension into RPM postgres
 COPY binaries/steampipe_postgres_fdw.so.gz /tmp/
 COPY binaries/steampipe_postgres_fdw.control /tmp/
 COPY binaries/steampipe_postgres_fdw--1.0.sql /tmp/
 
-RUN gunzip -c /tmp/steampipe_postgres_fdw.so.gz > /usr/pgsql-14/lib/steampipe_postgres_fdw.so \
+# Install FDW to both postgres paths (for postgres) and steampipe paths (for steampipe check)
+RUN mkdir -p /usr/pgsql-14/lib/postgresql \
+    && mkdir -p /usr/pgsql-14/share/postgresql/extension \
+    && gunzip -c /tmp/steampipe_postgres_fdw.so.gz > /usr/pgsql-14/lib/steampipe_postgres_fdw.so \
     && cp /tmp/steampipe_postgres_fdw.control /usr/pgsql-14/share/extension/ \
     && cp /tmp/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/extension/ \
+    && ln -s /usr/pgsql-14/lib/steampipe_postgres_fdw.so /usr/pgsql-14/lib/postgresql/steampipe_postgres_fdw.so \
+    && ln -s /usr/pgsql-14/share/extension/steampipe_postgres_fdw.control /usr/pgsql-14/share/postgresql/extension/ \
+    && ln -s /usr/pgsql-14/share/extension/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/postgresql/extension/ \
     && rm /tmp/steampipe_postgres_fdw.* \
     && chown -R builder:builder /usr/pgsql-14
 
@@ -47,8 +56,8 @@ RUN mkdir -p /home/builder/.steampipe/db/14.19.0/postgres \
     && cp -a /usr/pgsql-14/lib /home/builder/.steampipe/db/14.19.0/postgres/ \
     && cp -a /usr/pgsql-14/share /home/builder/.steampipe/db/14.19.0/postgres/
 
-# 5. Database versions.json with correct digest
-RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","image_digest":"sha256:84264ef41853178707bccb091f5450c22e835f8a98f9961592c75690321093d9","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"}}' \
+# 5. Database versions.json with correct structure
+RUN echo '{"embedded_db":{"name":"embeddedDB","version":"14.19.0","image_digest":"sha256:84264ef41853178707bccb091f5450c22e835f8a98f9961592c75690321093d9","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"},"struct_version":20220411}' \
     > /home/builder/.steampipe/db/versions.json
 
 # 6. Install plugins from local files

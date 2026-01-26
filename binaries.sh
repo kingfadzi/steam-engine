@@ -70,6 +70,10 @@ download_binary "PostgreSQL 14.19 Client" \
     "${PGDG_BASE_URL}/postgresql14-14.19-1PGDG.rhel9.x86_64.rpm" \
     "postgresql14.rpm"
 
+download_binary "PostgreSQL 14.19 Contrib" \
+    "${PGDG_BASE_URL}/postgresql14-contrib-14.19-1PGDG.rhel9.x86_64.rpm" \
+    "postgresql14-contrib.rpm"
+
 # FDW
 download_binary "FDW binary v${FDW_VERSION}" \
     "${FDW_BASE_URL}/steampipe_postgres_fdw.so.linux_amd64.gz" \
