@@ -9,6 +9,9 @@
 #   Stage 2 (wsl-base): Runtime image
 #
 
+# Global ARG for base image (must be before any FROM)
+ARG PROFILE=vpn
+
 # ============================================
 # Stage 1: Assemble steampipe on Alma9
 # ============================================
@@ -100,7 +103,6 @@ USER builder
 # ============================================
 # Stage 2: Runtime image
 # ============================================
-ARG PROFILE=vpn
 FROM wsl-base:${PROFILE}
 
 USER root
