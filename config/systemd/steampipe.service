@@ -9,7 +9,7 @@ Type=simple
 User=steampipe
 Group=steampipe
 
-# Create /run/steampipe as tmpfs (owned by steampipe)
+# Create /run/steampipe as tmpfs
 RuntimeDirectory=steampipe
 RuntimeDirectoryMode=0755
 
@@ -19,17 +19,13 @@ Environment=STEAMPIPE_MOD_LOCATION=/run/steampipe
 Environment=HOME=/opt/steampipe
 WorkingDirectory=/opt/steampipe
 
-# Setup: extract bundle to tmpfs, then initialize
-ExecStartPre=/opt/init/setup-tmpfs.sh
-ExecStartPre=/opt/init/steampipe.sh
+# Extract and start in one script (no gap for scanner)
 ExecStart=/opt/init/steampipe-start.sh
 
 ExecStop=/run/steampipe/steampipe/steampipe service stop
 
 Restart=on-failure
 RestartSec=10
-
-# Give steampipe time to initialize
 TimeoutStartSec=120
 
 [Install]
