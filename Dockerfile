@@ -19,6 +19,13 @@ ARG WIN_MOUNT=/mnt/c/devhome/projects/steamengine
 ARG DEFAULT_USER=fadzi
 
 # ============================================
+# Steampipe CLI from official RPM
+# ============================================
+COPY binaries/steampipe_linux_amd64.rpm /tmp/
+RUN dnf install -y /tmp/steampipe_linux_amd64.rpm \
+    && rm -f /tmp/steampipe_linux_amd64.rpm
+
+# ============================================
 # PostgreSQL 14 from local RPMs + utilities
 # ============================================
 COPY binaries/postgres/*.rpm /tmp/postgres/
@@ -39,7 +46,7 @@ RUN mkdir -p /usr/pgsql-14/lib /usr/pgsql-14/share/extension \
     && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw.so /usr/pgsql-14/lib/ \
     && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/extension/ \
     && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw.control /usr/pgsql-14/share/extension/ \
-    && rm -rf /tmp/fdw-extract
+    && rm -rf /tmp/fdw-extract /tmp/steampipe-bundle.tgz
 
 # Make postgres directory writable by fadzi (needed for steampipe temp files)
 RUN chown -R ${DEFAULT_USER}:${DEFAULT_USER} /usr/pgsql-14
@@ -74,13 +81,7 @@ COPY config/wsl.conf /etc/wsl.conf
 RUN mkdir -p /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres \
     && mkdir -p /home/${DEFAULT_USER}/.gateway \
     && mkdir -p /home/${DEFAULT_USER}/.secrets \
-    && mkdir -p /home/${DEFAULT_USER}/.local/bin \
-    && mkdir -p /home/${DEFAULT_USER}/.local/share/steam-engine
-
-# Stage steampipe bundle and configs
-RUN mv /tmp/steampipe-bundle.tgz /home/${DEFAULT_USER}/.local/share/steam-engine/
-COPY config/steampipe/*.spc /home/${DEFAULT_USER}/.local/share/steam-engine/
-COPY config/steampipe/steampipe.env.example /home/${DEFAULT_USER}/.local/share/steam-engine/
+    && mkdir -p /home/${DEFAULT_USER}/.local/bin
 
 # Gateway files
 COPY binaries/${GATEWAY_RELEASE} /home/${DEFAULT_USER}/.gateway/gateway.jar
@@ -111,7 +112,7 @@ ENV WIN_MOUNT=${WIN_MOUNT}
 # Persist ENV for WSL
 RUN echo "STEAMPIPE_INSTALL_DIR=/home/${DEFAULT_USER}/.steampipe" >> /etc/environment \
     && echo "STEAMPIPE_MOD_LOCATION=/home/${DEFAULT_USER}/.steampipe" >> /etc/environment \
-    && echo "PATH=/home/${DEFAULT_USER}/.steampipe/steampipe:/home/${DEFAULT_USER}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> /etc/environment
+    && echo "PATH=/usr/bin:/home/${DEFAULT_USER}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/sbin:/bin" >> /etc/environment
 
 # Default user for WSL
 USER ${DEFAULT_USER}

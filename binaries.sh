@@ -5,8 +5,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BINARIES_DIR="$SCRIPT_DIR/binaries"
 
 # === Binary URLs ===
-STEAMPIPE_URL="https://github.com/kingfadzi/steampipe-bundler/releases/download/v20260125/steampipe-bundle-20260125.tgz"
+STEAMPIPE_BUNDLE_URL="https://github.com/kingfadzi/steampipe-bundler/releases/download/v20260125/steampipe-bundle-20260125.tgz"
 GATEWAY_URL="https://github.com/kingfadzi/gateway/releases/download/v1.0.0/jira-sync-service-1.0.0-SNAPSHOT.jar"
+
+# Steampipe CLI RPM
+STEAMPIPE_VERSION="1.0.1"
+STEAMPIPE_RPM_URL="https://github.com/turbot/steampipe/releases/download/v${STEAMPIPE_VERSION}/steampipe_linux_amd64.rpm"
 
 # PostgreSQL RPMs
 POSTGRES_VERSION="14.20"
@@ -63,7 +67,8 @@ fetch_postgres() {
 
 fetch_steampipe_gateway() {
     echo "=== Downloading binaries ==="
-    download_binary "Steampipe" "$STEAMPIPE_URL" "steampipe-bundle.tgz"
+    download_binary "Steampipe Bundle (for FDW)" "$STEAMPIPE_BUNDLE_URL" "steampipe-bundle.tgz"
+    download_binary "Steampipe RPM" "$STEAMPIPE_RPM_URL" "steampipe_linux_amd64.rpm"
     download_binary "Gateway" "$GATEWAY_URL" "gateway.jar"
     echo "=== Done ==="
 }
