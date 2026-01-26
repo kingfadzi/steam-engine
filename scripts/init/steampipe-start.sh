@@ -4,6 +4,10 @@
 #
 set -e
 
+# Create postgres socket directory in /tmp (avoids /run permission issues)
+mkdir -p /tmp/postgresql
+export PGHOST=/tmp/postgresql
+
 HOME_DIR="/home/fadzi"
 INSTALL_DIR="$HOME_DIR/.steampipe"
 DATA_DIR="$INSTALL_DIR/db/14.19.0/data"
@@ -31,6 +35,9 @@ if [ ! -f "$DATA_DIR/postgresql.conf" ]; then
     echo "Initializing postgres database..."
     mkdir -p "$DATA_DIR"
     "$INSTALL_DIR/db/14.19.0/postgres/bin/initdb" -D "$DATA_DIR"
+
+    # Configure postgres to use /tmp for socket (avoids /run permission issues)
+    echo "unix_socket_directories = '/tmp/postgresql'" >> "$DATA_DIR/postgresql.conf"
 fi
 
 # Check secrets

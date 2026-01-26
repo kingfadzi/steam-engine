@@ -19,10 +19,10 @@ ARG WIN_MOUNT=/mnt/c/devhome/projects/steamengine
 ARG DEFAULT_USER=fadzi
 
 # ============================================
-# PostgreSQL 14 from local RPMs
+# PostgreSQL 14 from local RPMs + utilities
 # ============================================
 COPY binaries/postgres/*.rpm /tmp/postgres/
-RUN dnf install -y /tmp/postgres/*.rpm \
+RUN dnf install -y /tmp/postgres/*.rpm telnet \
     && rm -rf /tmp/postgres \
     && dnf clean all
 
@@ -42,9 +42,6 @@ RUN mkdir -p /usr/pgsql-14/lib/postgresql /usr/pgsql-14/share/postgresql/extensi
 
 # Mask RPM postgres service to prevent conflicts
 RUN systemctl mask postgresql-14.service
-
-# Create postgres socket directory at boot (tmpfiles.d for /run which is tmpfs)
-RUN echo "d /run/postgresql 0755 ${DEFAULT_USER} ${DEFAULT_USER} -" > /etc/tmpfiles.d/postgresql.conf
 
 # ============================================
 # Systemd Services
