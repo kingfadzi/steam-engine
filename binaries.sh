@@ -15,7 +15,12 @@ POSTGRES_URL="https://github.com/kingfadzi/steampipe-bundler/releases/download/v
 FDW_BASE_URL="https://github.com/turbot/steampipe-postgres-fdw/releases/download/v${FDW_VERSION}"
 GATEWAY_URL="https://github.com/kingfadzi/gateway/releases/download/v1.0.0/jira-sync-service-1.0.0-SNAPSHOT.jar"
 
-# Plugins are OCI-only, installed via steampipe in Dockerfile
+# Plugins (mirrored from ghcr.io to bundler)
+JIRA_PLUGIN_VERSION="2.0.3"
+GITLAB_PLUGIN_VERSION="0.6.0"
+BUNDLER_BASE_URL="https://github.com/kingfadzi/steampipe-bundler/releases/download/v20260125"
+JIRA_PLUGIN_URL="${BUNDLER_BASE_URL}/steampipe-plugin-jira-${JIRA_PLUGIN_VERSION}-linux-amd64.tar.gz"
+GITLAB_PLUGIN_URL="${BUNDLER_BASE_URL}/steampipe-plugin-gitlab-${GITLAB_PLUGIN_VERSION}-linux-amd64.tar.gz"
 
 # Parse arguments
 FORCE=false
@@ -72,6 +77,15 @@ download_binary "FDW SQL v${FDW_VERSION}" \
 download_binary "Gateway" \
     "$GATEWAY_URL" \
     "gateway.jar"
+
+# Plugins
+download_binary "Jira Plugin v${JIRA_PLUGIN_VERSION}" \
+    "$JIRA_PLUGIN_URL" \
+    "steampipe-plugin-jira.tar.gz"
+
+download_binary "GitLab Plugin v${GITLAB_PLUGIN_VERSION}" \
+    "$GITLAB_PLUGIN_URL" \
+    "steampipe-plugin-gitlab.tar.gz"
 
 echo ""
 echo "=== Done ==="

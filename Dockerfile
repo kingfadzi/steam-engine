@@ -67,12 +67,35 @@ RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","install_date":"2025-01
     > /home/builder/.steampipe/db/versions.json
 
 # ============================================
-# 5. Install plugins via steampipe (OCI download)
+# 5. Install plugins from local files
 # ============================================
+COPY binaries/steampipe-plugin-jira.tar.gz /tmp/
+COPY binaries/steampipe-plugin-gitlab.tar.gz /tmp/
+
+# Jira plugin
+RUN mkdir -p /tmp/jira-plugin \
+    && tar -xzf /tmp/steampipe-plugin-jira.tar.gz -C /tmp/jira-plugin \
+    && mkdir -p /home/builder/.steampipe/plugins/hub.steampipe.io/plugins/turbot/jira@latest \
+    && gunzip -c /tmp/jira-plugin/steampipe-plugin-jira_linux_amd64.gz \
+       > /home/builder/.steampipe/plugins/hub.steampipe.io/plugins/turbot/jira@latest/steampipe-plugin-jira.plugin \
+    && chmod +x /home/builder/.steampipe/plugins/hub.steampipe.io/plugins/turbot/jira@latest/steampipe-plugin-jira.plugin \
+    && mkdir -p /home/builder/.steampipe/config \
+    && cp /tmp/jira-plugin/config/* /home/builder/.steampipe/config/ \
+    && rm -rf /tmp/jira-plugin /tmp/steampipe-plugin-jira.tar.gz
+
+# GitLab plugin
+RUN mkdir -p /tmp/gitlab-plugin \
+    && tar -xzf /tmp/steampipe-plugin-gitlab.tar.gz -C /tmp/gitlab-plugin \
+    && mkdir -p /home/builder/.steampipe/plugins/hub.steampipe.io/plugins/theapsgroup/gitlab@latest \
+    && gunzip -c /tmp/gitlab-plugin/steampipe-plugin-gitlab_linux_amd64.gz \
+       > /home/builder/.steampipe/plugins/hub.steampipe.io/plugins/theapsgroup/gitlab@latest/steampipe-plugin-gitlab.plugin \
+    && chmod +x /home/builder/.steampipe/plugins/hub.steampipe.io/plugins/theapsgroup/gitlab@latest/steampipe-plugin-gitlab.plugin \
+    && cp /tmp/gitlab-plugin/config/* /home/builder/.steampipe/config/ \
+    && rm -rf /tmp/gitlab-plugin /tmp/steampipe-plugin-gitlab.tar.gz
+
 RUN chown -R builder:builder /home/builder/.steampipe
 
 USER builder
-RUN steampipe plugin install turbot/jira theapsgroup/gitlab
 
 # ============================================
 # Stage 2: Runtime image
