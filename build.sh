@@ -161,7 +161,9 @@ check_binaries() {
     local missing=0
     local required_files=(
         "steampipe_linux_amd64.tar.gz"
-        "postgres-14.19.0-linux-amd64.txz"
+        "postgresql14-libs.rpm"
+        "postgresql14.rpm"
+        "postgresql14-server.rpm"
         "steampipe_postgres_fdw.so.gz"
         "steampipe_postgres_fdw.control"
         "steampipe_postgres_fdw--1.0.sql"

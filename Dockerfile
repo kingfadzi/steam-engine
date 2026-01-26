@@ -40,34 +40,10 @@ RUN tar -xzf /tmp/steampipe_linux_amd64.tar.gz -C /usr/local/bin \
     && rm /tmp/steampipe_linux_amd64.tar.gz
 
 # ============================================
-# 2. Portable Postgres
+# 2. Prepare steampipe directories (postgres installed in Stage 2)
 # ============================================
-COPY binaries/postgres-${POSTGRES_VERSION}-linux-amd64.txz /tmp/
-RUN mkdir -p /home/builder/.steampipe/db/${POSTGRES_VERSION}/postgres \
-    && tar -xJf /tmp/postgres-${POSTGRES_VERSION}-linux-amd64.txz \
-       -C /home/builder/.steampipe/db/${POSTGRES_VERSION}/postgres \
-    && rm /tmp/postgres-${POSTGRES_VERSION}-linux-amd64.txz
-
-# ============================================
-# 3. FDW Extension
-# ============================================
-COPY binaries/steampipe_postgres_fdw.so.gz /tmp/
-COPY binaries/steampipe_postgres_fdw.control /tmp/
-COPY binaries/steampipe_postgres_fdw--1.0.sql /tmp/
-
-RUN gunzip -c /tmp/steampipe_postgres_fdw.so.gz \
-      > /home/builder/.steampipe/db/${POSTGRES_VERSION}/postgres/lib/postgresql/steampipe_postgres_fdw.so \
-    && cp /tmp/steampipe_postgres_fdw.control \
-          /home/builder/.steampipe/db/${POSTGRES_VERSION}/postgres/share/postgresql/extension/ \
-    && cp /tmp/steampipe_postgres_fdw--1.0.sql \
-          /home/builder/.steampipe/db/${POSTGRES_VERSION}/postgres/share/postgresql/extension/ \
-    && rm /tmp/steampipe_postgres_fdw.*
-
-# ============================================
-# 4. Database versions.json
-# ============================================
-RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"}}' \
-    > /home/builder/.steampipe/db/versions.json
+RUN mkdir -p /home/builder/.steampipe/db/${POSTGRES_VERSION} \
+    && mkdir -p /home/builder/.steampipe/config
 
 # ============================================
 # 5. Install plugins from local files
@@ -115,10 +91,44 @@ ARG WIN_MOUNT=/mnt/c/devhome/projects/steamengine
 ARG DEFAULT_USER=fadzi
 
 # ============================================
+# Install PostgreSQL 14 from local RPMs
+# ============================================
+COPY binaries/postgresql14-libs.rpm /tmp/
+COPY binaries/postgresql14.rpm /tmp/
+COPY binaries/postgresql14-server.rpm /tmp/
+
+RUN dnf install -y /tmp/postgresql14-libs.rpm /tmp/postgresql14.rpm /tmp/postgresql14-server.rpm \
+    && rm /tmp/postgresql14*.rpm
+
+# ============================================
+# Install FDW Extension into RPM postgres
+# ============================================
+COPY binaries/steampipe_postgres_fdw.so.gz /tmp/
+COPY binaries/steampipe_postgres_fdw.control /tmp/
+COPY binaries/steampipe_postgres_fdw--1.0.sql /tmp/
+
+RUN gunzip -c /tmp/steampipe_postgres_fdw.so.gz > /usr/pgsql-14/lib/steampipe_postgres_fdw.so \
+    && cp /tmp/steampipe_postgres_fdw.control /usr/pgsql-14/share/extension/ \
+    && cp /tmp/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/extension/ \
+    && rm /tmp/steampipe_postgres_fdw.*
+
+# ============================================
 # Copy pre-built steampipe from builder
 # ============================================
 COPY --from=steampipe-builder /usr/local/bin/steampipe /usr/local/bin/steampipe
 COPY --from=steampipe-builder /home/builder/.steampipe /home/${DEFAULT_USER}/.steampipe
+
+# ============================================
+# Symlink RPM postgres to where steampipe expects it
+# ============================================
+RUN mkdir -p /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres \
+    && ln -s /usr/pgsql-14/bin /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres/bin \
+    && ln -s /usr/pgsql-14/lib /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres/lib \
+    && ln -s /usr/pgsql-14/share /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres/share
+
+# Create versions.json so steampipe thinks DB is installed
+RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"}}' \
+    > /home/${DEFAULT_USER}/.steampipe/db/versions.json
 
 # Fix ownership
 RUN chown -R ${DEFAULT_USER}:${DEFAULT_USER} /home/${DEFAULT_USER}/.steampipe

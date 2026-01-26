@@ -11,9 +11,11 @@ FDW_VERSION="2.1.4"
 
 # === URLs ===
 STEAMPIPE_URL="https://github.com/turbot/steampipe/releases/download/v${STEAMPIPE_VERSION}/steampipe_linux_amd64.tar.gz"
-POSTGRES_URL="https://github.com/kingfadzi/steampipe-bundler/releases/download/v20260125/postgres-${POSTGRES_VERSION}-linux-amd64.txz"
 FDW_BASE_URL="https://github.com/turbot/steampipe-postgres-fdw/releases/download/v${FDW_VERSION}"
 GATEWAY_URL="https://github.com/kingfadzi/gateway/releases/download/v1.0.0/jira-sync-service-1.0.0-SNAPSHOT.jar"
+
+# PostgreSQL 14 RPMs (PGDG for RHEL 9)
+PGDG_BASE_URL="https://download.postgresql.org/pub/repos/yum/14/redhat/rhel-9-x86_64"
 
 # Plugins (mirrored from ghcr.io to bundler)
 JIRA_PLUGIN_VERSION="2.0.3"
@@ -55,10 +57,18 @@ download_binary "Steampipe CLI v${STEAMPIPE_VERSION}" \
     "$STEAMPIPE_URL" \
     "steampipe_linux_amd64.tar.gz"
 
-# Portable Postgres
-download_binary "Postgres ${POSTGRES_VERSION}" \
-    "$POSTGRES_URL" \
-    "postgres-${POSTGRES_VERSION}-linux-amd64.txz"
+# PostgreSQL 14 RPMs
+download_binary "PostgreSQL 14 Server" \
+    "${PGDG_BASE_URL}/postgresql14-server-14.15-1PGDG.rhel9.x86_64.rpm" \
+    "postgresql14-server.rpm"
+
+download_binary "PostgreSQL 14 Libs" \
+    "${PGDG_BASE_URL}/postgresql14-libs-14.15-1PGDG.rhel9.x86_64.rpm" \
+    "postgresql14-libs.rpm"
+
+download_binary "PostgreSQL 14 Client" \
+    "${PGDG_BASE_URL}/postgresql14-14.15-1PGDG.rhel9.x86_64.rpm" \
+    "postgresql14.rpm"
 
 # FDW
 download_binary "FDW binary v${FDW_VERSION}" \

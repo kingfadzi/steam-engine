@@ -1,4 +1,4 @@
-# Test Dockerfile - just the builder stage
+# Test Dockerfile - standalone test with RPM postgres
 FROM almalinux:9
 
 RUN dnf install -y tar gzip xz
@@ -16,36 +16,40 @@ ENV STEAMPIPE_TELEMETRY=none
 RUN useradd -m builder
 WORKDIR /home/builder
 
-# 1. Steampipe CLI
-COPY binaries/steampipe_linux_amd64.tar.gz /tmp/
-RUN tar -xzf /tmp/steampipe_linux_amd64.tar.gz -C /usr/local/bin \
-    && rm /tmp/steampipe_linux_amd64.tar.gz
+# 1. Install PostgreSQL 14 from local RPMs
+COPY binaries/postgresql14-libs.rpm /tmp/
+COPY binaries/postgresql14.rpm /tmp/
+COPY binaries/postgresql14-server.rpm /tmp/
 
-# 2. Portable Postgres
-COPY binaries/postgres-14.19.0-linux-amd64.txz /tmp/
-RUN mkdir -p /home/builder/.steampipe/db/14.19.0/postgres \
-    && tar -xJf /tmp/postgres-14.19.0-linux-amd64.txz \
-       -C /home/builder/.steampipe/db/14.19.0/postgres \
-    && rm /tmp/postgres-14.19.0-linux-amd64.txz
+RUN dnf install -y /tmp/postgresql14-libs.rpm /tmp/postgresql14.rpm /tmp/postgresql14-server.rpm \
+    && rm /tmp/postgresql14*.rpm
 
-# 3. FDW Extension
+# 2. Install FDW Extension into RPM postgres
 COPY binaries/steampipe_postgres_fdw.so.gz /tmp/
 COPY binaries/steampipe_postgres_fdw.control /tmp/
 COPY binaries/steampipe_postgres_fdw--1.0.sql /tmp/
 
-RUN gunzip -c /tmp/steampipe_postgres_fdw.so.gz \
-      > /home/builder/.steampipe/db/14.19.0/postgres/lib/postgresql/steampipe_postgres_fdw.so \
-    && cp /tmp/steampipe_postgres_fdw.control \
-          /home/builder/.steampipe/db/14.19.0/postgres/share/postgresql/extension/ \
-    && cp /tmp/steampipe_postgres_fdw--1.0.sql \
-          /home/builder/.steampipe/db/14.19.0/postgres/share/postgresql/extension/ \
+RUN gunzip -c /tmp/steampipe_postgres_fdw.so.gz > /usr/pgsql-14/lib/steampipe_postgres_fdw.so \
+    && cp /tmp/steampipe_postgres_fdw.control /usr/pgsql-14/share/extension/ \
+    && cp /tmp/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/extension/ \
     && rm /tmp/steampipe_postgres_fdw.*
 
-# 4. Database versions.json
+# 3. Steampipe CLI
+COPY binaries/steampipe_linux_amd64.tar.gz /tmp/
+RUN tar -xzf /tmp/steampipe_linux_amd64.tar.gz -C /usr/local/bin \
+    && rm /tmp/steampipe_linux_amd64.tar.gz
+
+# 4. Symlink RPM postgres to where steampipe expects it
+RUN mkdir -p /home/builder/.steampipe/db/14.19.0/postgres \
+    && ln -s /usr/pgsql-14/bin /home/builder/.steampipe/db/14.19.0/postgres/bin \
+    && ln -s /usr/pgsql-14/lib /home/builder/.steampipe/db/14.19.0/postgres/lib \
+    && ln -s /usr/pgsql-14/share /home/builder/.steampipe/db/14.19.0/postgres/share
+
+# 5. Database versions.json
 RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"}}' \
     > /home/builder/.steampipe/db/versions.json
 
-# 5. Install plugins from local files
+# 6. Install plugins from local files
 COPY binaries/steampipe-plugin-jira.tar.gz /tmp/
 COPY binaries/steampipe-plugin-gitlab.tar.gz /tmp/
 
