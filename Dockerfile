@@ -99,9 +99,7 @@ COPY binaries/postgresql14-server.rpm /tmp/
 COPY binaries/postgresql14-contrib.rpm /tmp/
 
 RUN dnf install -y /tmp/postgresql14-libs.rpm /tmp/postgresql14.rpm /tmp/postgresql14-server.rpm /tmp/postgresql14-contrib.rpm \
-    && rm /tmp/postgresql14*.rpm \
-    && mkdir -p /run/postgresql \
-    && chown ${DEFAULT_USER}:${DEFAULT_USER} /run/postgresql
+    && rm /tmp/postgresql14*.rpm
 
 # ============================================
 # Install FDW Extension into RPM postgres

@@ -23,9 +23,7 @@ COPY binaries/postgresql14-server.rpm /tmp/
 COPY binaries/postgresql14-contrib.rpm /tmp/
 
 RUN dnf install -y /tmp/postgresql14-libs.rpm /tmp/postgresql14.rpm /tmp/postgresql14-server.rpm /tmp/postgresql14-contrib.rpm \
-    && rm /tmp/postgresql14*.rpm \
-    && mkdir -p /run/postgresql \
-    && chown builder:builder /run/postgresql
+    && rm /tmp/postgresql14*.rpm
 
 # 2. Install FDW Extension into RPM postgres
 COPY binaries/steampipe_postgres_fdw.so.gz /tmp/
@@ -59,6 +57,9 @@ RUN mkdir -p /home/builder/.steampipe/db/14.19.0/postgres \
 # 5. Database versions.json with correct structure
 RUN echo '{"embedded_db":{"name":"embeddedDB","version":"14.19.0","image_digest":"sha256:84264ef41853178707bccb091f5450c22e835f8a98f9961592c75690321093d9","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"},"struct_version":20220411}' \
     > /home/builder/.steampipe/db/versions.json
+
+# 5b. Create /run/postgresql for first run (socket moved to /tmp after init)
+RUN mkdir -p /run/postgresql && chown builder:builder /run/postgresql
 
 # 6. Install plugins from local files
 COPY binaries/steampipe-plugin-jira.tar.gz /tmp/
