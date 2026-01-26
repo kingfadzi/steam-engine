@@ -38,12 +38,16 @@ if [ ! -f "$DATA_DIR/postgresql.conf" ]; then
 fi
 
 # Ensure postgres uses /tmp for socket (avoids /run permission issues)
-if ! grep -q "unix_socket_directories = '/tmp/postgresql'" "$DATA_DIR/postgresql.conf" 2>/dev/null; then
+# Use conf.d approach - won't get overwritten by steampipe
+CONF_D="$DATA_DIR/postgresql.conf.d"
+SOCKET_CONF="$CONF_D/01-socket-dir.conf"
+if [ ! -f "$SOCKET_CONF" ]; then
     echo "Configuring postgres socket directory..."
-    sed -i "s|^#*unix_socket_directories.*|unix_socket_directories = '/tmp/postgresql'|" "$DATA_DIR/postgresql.conf"
-    # If sed didn't match, append it
-    if ! grep -q "unix_socket_directories = '/tmp/postgresql'" "$DATA_DIR/postgresql.conf"; then
-        echo "unix_socket_directories = '/tmp/postgresql'" >> "$DATA_DIR/postgresql.conf"
+    mkdir -p "$CONF_D"
+    echo "unix_socket_directories = '/tmp/postgresql'" > "$SOCKET_CONF"
+    # Ensure postgresql.conf includes conf.d
+    if ! grep -q "include_dir = 'postgresql.conf.d'" "$DATA_DIR/postgresql.conf" 2>/dev/null; then
+        echo "include_dir = 'postgresql.conf.d'" >> "$DATA_DIR/postgresql.conf"
     fi
 fi
 
