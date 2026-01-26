@@ -13,6 +13,9 @@ Environment=STEAMPIPE_INSTALL_DIR=/home/fadzi/.steampipe
 Environment=HOME=/home/fadzi
 WorkingDirectory=/home/fadzi
 
+# Create postgres socket directory as root before starting (+ prefix = run as root)
+ExecStartPre=+/bin/bash -c 'mkdir -p /run/postgresql && chown fadzi:fadzi /run/postgresql'
+
 ExecStart=/home/fadzi/.local/bin/steampipe-start.sh
 ExecStop=/home/fadzi/.steampipe/steampipe/steampipe service stop
 
