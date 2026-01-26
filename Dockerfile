@@ -4,8 +4,44 @@
 # Build: ./build.sh vpn
 # Import: wsl --import steam-engine C:\wsl\steam-engine steam-engine.tar
 #
-# Requires: wsl-base:${PROFILE} to be built first (auto-builds if missing)
+# Multi-stage build:
+#   Stage 1 (Alma9): Build steampipe with embedded postgres
+#   Stage 2 (wsl-base): Runtime image with pre-built steampipe
 #
+
+# ============================================
+# Stage 1: Build steampipe on Alma9
+# ============================================
+FROM almalinux:9 AS steampipe-builder
+
+# Install dependencies
+RUN dnf install -y curl tar gzip
+
+# Install steampipe CLI
+RUN curl -fsSL https://steampipe.io/install/steampipe.sh | sh
+
+# Set up environment for steampipe
+ENV HOME=/root
+ENV STEAMPIPE_UPDATE_CHECK=false
+ENV STEAMPIPE_TELEMETRY=none
+
+# Initialize steampipe - this downloads embedded postgres
+# Start service briefly to trigger setup, then stop
+RUN steampipe service start && sleep 5 && steampipe service stop
+
+# Copy FDW into steampipe's postgres directory
+COPY binaries/steampipe-bundle.tgz /tmp/steampipe-bundle.tgz
+RUN mkdir -p /tmp/fdw-extract \
+    && tar -xzf /tmp/steampipe-bundle.tgz -C /tmp/fdw-extract --wildcards '*/fdw/*' \
+    && PGDIR=$(ls -d /root/.steampipe/db/*/postgres) \
+    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw.so "$PGDIR/lib/" \
+    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw--1.0.sql "$PGDIR/share/extension/" \
+    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw.control "$PGDIR/share/extension/" \
+    && rm -rf /tmp/fdw-extract /tmp/steampipe-bundle.tgz
+
+# ============================================
+# Stage 2: Runtime image
+# ============================================
 ARG PROFILE=vpn
 FROM wsl-base:${PROFILE}
 
@@ -19,49 +55,24 @@ ARG WIN_MOUNT=/mnt/c/devhome/projects/steamengine
 ARG DEFAULT_USER=fadzi
 
 # ============================================
-# Steampipe CLI from official RPM
+# Copy pre-built steampipe from builder
 # ============================================
-COPY binaries/steampipe_linux_amd64.rpm /tmp/
-RUN dnf install -y /tmp/steampipe_linux_amd64.rpm \
-    && rm -f /tmp/steampipe_linux_amd64.rpm
+COPY --from=steampipe-builder /usr/local/bin/steampipe /usr/local/bin/steampipe
+COPY --from=steampipe-builder /root/.steampipe /home/${DEFAULT_USER}/.steampipe
 
-# ============================================
-# PostgreSQL 14 from local RPMs + utilities
-# ============================================
-COPY binaries/postgres/*.rpm /tmp/postgres/
-RUN dnf install -y /tmp/postgres/*.rpm telnet \
-    && rm -rf /tmp/postgres \
-    && dnf clean all
+# Fix ownership
+RUN chown -R ${DEFAULT_USER}:${DEFAULT_USER} /home/${DEFAULT_USER}/.steampipe
 
-# ============================================
-# Install FDW extension to RPM postgres
-# ============================================
-# Steampipe embedded postgres expects FDW at:
-#   <pg_dir>/lib/steampipe_postgres_fdw.so
-#   <pg_dir>/share/extension/steampipe_postgres_fdw*
-COPY binaries/steampipe-bundle.tgz /tmp/steampipe-bundle.tgz
-RUN mkdir -p /usr/pgsql-14/lib /usr/pgsql-14/share/extension \
-    && mkdir -p /tmp/fdw-extract \
-    && tar -xzf /tmp/steampipe-bundle.tgz -C /tmp/fdw-extract --wildcards '*/fdw/*' \
-    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw.so /usr/pgsql-14/lib/ \
-    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/extension/ \
-    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw.control /usr/pgsql-14/share/extension/ \
-    && rm -rf /tmp/fdw-extract /tmp/steampipe-bundle.tgz
-
-# Make postgres directory writable by fadzi (needed for steampipe temp files)
-RUN chown -R ${DEFAULT_USER}:${DEFAULT_USER} /usr/pgsql-14
-
-# Mask RPM postgres service to prevent conflicts
-RUN systemctl mask postgresql-14.service
+# Install utilities
+RUN dnf install -y telnet && dnf clean all
 
 # ============================================
 # Systemd Services
 # ============================================
 COPY config/systemd/steampipe.service /etc/systemd/system/
 COPY config/systemd/gateway.service /etc/systemd/system/
-COPY config/systemd/home-fadzi-.steampipe-db-14.2.0-postgres.mount /etc/systemd/system/
 
-RUN systemctl enable steampipe.service gateway.service home-fadzi-.steampipe-db-14.2.0-postgres.mount
+RUN systemctl enable steampipe.service gateway.service
 
 # ============================================
 # Profile Scripts
@@ -77,9 +88,7 @@ COPY config/wsl.conf /etc/wsl.conf
 # ============================================
 # Prepare user home directory
 # ============================================
-# Create directory structure (owned by default user)
-RUN mkdir -p /home/${DEFAULT_USER}/.steampipe/db/14.2.0/postgres \
-    && mkdir -p /home/${DEFAULT_USER}/.gateway \
+RUN mkdir -p /home/${DEFAULT_USER}/.gateway \
     && mkdir -p /home/${DEFAULT_USER}/.secrets \
     && mkdir -p /home/${DEFAULT_USER}/.local/bin
 
@@ -112,7 +121,7 @@ ENV WIN_MOUNT=${WIN_MOUNT}
 # Persist ENV for WSL
 RUN echo "STEAMPIPE_INSTALL_DIR=/home/${DEFAULT_USER}/.steampipe" >> /etc/environment \
     && echo "STEAMPIPE_MOD_LOCATION=/home/${DEFAULT_USER}/.steampipe" >> /etc/environment \
-    && echo "PATH=/usr/bin:/home/${DEFAULT_USER}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/sbin:/bin" >> /etc/environment
+    && echo "PATH=/usr/local/bin:/home/${DEFAULT_USER}/.local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/sbin:/bin" >> /etc/environment
 
 # Default user for WSL
 USER ${DEFAULT_USER}

@@ -1,8 +1,7 @@
 [Unit]
 Description=Steampipe SQL Service
 Documentation=https://steampipe.io/docs
-After=network.target local-fs.target home-fadzi-.steampipe-db-14.19.0-postgres.mount
-Requires=home-fadzi-.steampipe-db-14.19.0-postgres.mount
+After=network.target local-fs.target
 
 [Service]
 Type=simple
@@ -12,14 +11,11 @@ Group=fadzi
 Environment=STEAMPIPE_INSTALL_DIR=/home/fadzi/.steampipe
 Environment=HOME=/home/fadzi
 Environment=STEAMPIPE_UPDATE_CHECK=false
-Environment=PATH=/usr/bin:/usr/local/bin
+Environment=PATH=/usr/local/bin:/usr/bin:/usr/sbin
 WorkingDirectory=/home/fadzi
 
-# Create postgres socket directory as root before starting (+ prefix = run as root)
-ExecStartPre=+/bin/bash -c 'mkdir -p /run/postgresql && chown fadzi:fadzi /run/postgresql'
-
 ExecStart=/home/fadzi/.local/bin/steampipe-start.sh
-ExecStop=/usr/bin/steampipe service stop
+ExecStop=/usr/local/bin/steampipe service stop
 
 Restart=on-failure
 RestartSec=10
