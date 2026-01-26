@@ -41,6 +41,9 @@ RUN mkdir -p /usr/pgsql-14/lib /usr/pgsql-14/share/extension \
     && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw.control /usr/pgsql-14/share/extension/ \
     && rm -rf /tmp/fdw-extract
 
+# Make postgres directory writable by fadzi (needed for steampipe temp files)
+RUN chown -R ${DEFAULT_USER}:${DEFAULT_USER} /usr/pgsql-14
+
 # Mask RPM postgres service to prevent conflicts
 RUN systemctl mask postgresql-14.service
 
