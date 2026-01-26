@@ -60,7 +60,7 @@ RUN systemctl enable steampipe.service gateway.service home-fadzi-.steampipe-db-
 # Profile Scripts
 # ============================================
 COPY scripts/profile.d/*.sh /etc/profile.d/
-RUN chmod 644 /etc/profile.d/*.sh 2>/dev/null || true
+RUN sed -i 's/\r$//' /etc/profile.d/*.sh && chmod 644 /etc/profile.d/*.sh
 
 # ============================================
 # WSL Configuration
@@ -89,7 +89,9 @@ COPY config/gateway/application.yml /home/${DEFAULT_USER}/.gateway/
 # Init/utility scripts
 COPY scripts/init/*.sh /home/${DEFAULT_USER}/.local/bin/
 COPY scripts/bin/*.sh /home/${DEFAULT_USER}/.local/bin/
-RUN chmod +x /home/${DEFAULT_USER}/.local/bin/*.sh
+# Ensure Unix line endings (strip CR) and make executable
+RUN sed -i 's/\r$//' /home/${DEFAULT_USER}/.local/bin/*.sh \
+    && chmod +x /home/${DEFAULT_USER}/.local/bin/*.sh
 
 # Set ownership
 RUN chown -R ${DEFAULT_USER}:${DEFAULT_USER} /home/${DEFAULT_USER}
