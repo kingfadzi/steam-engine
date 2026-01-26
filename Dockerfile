@@ -3,6 +3,7 @@
 #
 # Build: ./build.sh vpn
 # Import: wsl --import steam-engine C:\wsl\steam-engine steam-engine.tar
+# Setup: install.sh /mnt/c/path/to/steampipe-bundle.tgz
 #
 # Requires: wsl-base:${PROFILE} to be built first (auto-builds if missing)
 #
@@ -30,28 +31,28 @@ RUN useradd -r -d /opt/steampipe -s /bin/bash steampipe \
     && mkdir -p /opt/steampipe /opt/gateway /opt/wsl-secrets
 
 # ============================================
-# Steampipe Directory Structure (bundle installed post-import)
+# Steampipe Directory Structure
 # ============================================
-# Bundle is NOT baked into image - Windows Defender strips binaries during WSL import.
-# User runs install-steampipe.sh after import to copy bundle from Windows filesystem.
-RUN mkdir -p /opt/steampipe/steampipe \
-    /opt/steampipe/db \
-    /opt/steampipe/config \
-    /opt/steampipe/plugins \
+# Binaries installed post-import via install.sh
+# Runtime uses /run/steampipe (tmpfs), data persists in /opt/steampipe
+RUN mkdir -p /opt/steampipe/config \
+    /opt/steampipe/data \
+    /opt/steampipe/internal \
     && chown -R steampipe:steampipe /opt/steampipe
 
 # Copy steampipe plugin configs and example env file
 COPY --chown=steampipe:steampipe config/steampipe/*.spc /opt/steampipe/config/
 COPY --chown=steampipe:steampipe config/steampipe/steampipe.env.example /opt/steampipe/config/
 
-ENV STEAMPIPE_INSTALL_DIR=/opt/steampipe
-ENV STEAMPIPE_MOD_LOCATION=/opt/steampipe
-ENV PATH="/opt/steampipe/steampipe:/opt/steampipe/bin:${PATH}"
+# Runtime environment (steampipe runs from tmpfs)
+ENV STEAMPIPE_INSTALL_DIR=/run/steampipe
+ENV STEAMPIPE_MOD_LOCATION=/run/steampipe
+ENV PATH="/run/steampipe/steampipe:/run/steampipe/bin:${PATH}"
 
-# Persist ENV to /etc/environment for WSL export (docker export loses ENV)
-RUN echo "STEAMPIPE_INSTALL_DIR=/opt/steampipe" >> /etc/environment \
-    && echo "STEAMPIPE_MOD_LOCATION=/opt/steampipe" >> /etc/environment \
-    && echo "PATH=/opt/steampipe/steampipe:/opt/steampipe/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> /etc/environment
+# Persist ENV to /etc/environment for WSL (docker export loses ENV)
+RUN echo "STEAMPIPE_INSTALL_DIR=/run/steampipe" >> /etc/environment \
+    && echo "STEAMPIPE_MOD_LOCATION=/run/steampipe" >> /etc/environment \
+    && echo "PATH=/run/steampipe/steampipe:/run/steampipe/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> /etc/environment
 
 # ============================================
 # Gateway Service
@@ -63,13 +64,10 @@ RUN mkdir -p /opt/gateway/logs \
     && chown -R steampipe:steampipe /opt/gateway
 
 # ============================================
-# Systemd Services
+# Systemd Services (disabled by default, install.sh enables)
 # ============================================
 COPY config/systemd/steampipe.service /etc/systemd/system/
 COPY config/systemd/gateway.service /etc/systemd/system/
-
-RUN systemctl enable steampipe.service \
-    && systemctl enable gateway.service
 
 # ============================================
 # Initialization Scripts
@@ -79,10 +77,9 @@ RUN chmod +x /opt/init/*.sh
 
 # ============================================
 # Profile Scripts (steam-engine specific)
-# Numbered 06-08 to run after base's 00-05
 # ============================================
 COPY scripts/profile.d/*.sh /etc/profile.d/
-RUN chmod 644 /etc/profile.d/01-*.sh /etc/profile.d/06-*.sh /etc/profile.d/07-*.sh /etc/profile.d/08-*.sh
+RUN chmod 644 /etc/profile.d/*.sh 2>/dev/null || true
 
 # ============================================
 # Utility Scripts
@@ -91,12 +88,12 @@ COPY scripts/bin/ /usr/local/bin/
 RUN chmod +x /usr/local/bin/*.sh
 
 # ============================================
-# WSL Configuration (override base if needed)
+# WSL Configuration
 # ============================================
 COPY config/wsl.conf /etc/wsl.conf
 RUN echo "${WIN_MOUNT}/secrets /opt/wsl-secrets none bind,nofail 0 0" > /etc/fstab
 
-# Ensure secrets directory ownership (created earlier with user)
+# Ensure secrets directory ownership
 RUN chown steampipe:steampipe /opt/wsl-secrets
 
 # ============================================

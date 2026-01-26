@@ -405,52 +405,55 @@ debug_wsl_image() {
     docker run --rm "${IMAGE_NAME}:debug" /bin/bash -c '
         echo "=== Environment Variables ==="
         echo "STEAMPIPE_INSTALL_DIR=${STEAMPIPE_INSTALL_DIR:-NOT SET}"
-        echo "STEAMPIPE_MOD_LOCATION=${STEAMPIPE_MOD_LOCATION:-NOT SET}"
-        echo "HOME=${HOME:-NOT SET}"
+        echo "(Expected: NOT SET - docker export loses ENV)"
         echo ""
+
         echo "=== /etc/environment ==="
         cat /etc/environment 2>/dev/null || echo "/etc/environment missing"
-
         echo ""
-        echo "=== Steampipe Directory Structure ==="
-        ls -la /opt/steampipe/ 2>/dev/null || echo "/opt/steampipe missing"
 
+        echo "=== Persistent Directory Structure ==="
+        echo "/opt/steampipe:"
+        ls -la /opt/steampipe/ 2>/dev/null || echo "  MISSING"
         echo ""
-        echo "=== Postgres Binaries ==="
-        ls -la /opt/steampipe/db/14.19.0/postgres/bin/ 2>/dev/null || echo "Postgres binaries missing"
 
+        echo "=== Config Files ==="
+        ls -la /opt/steampipe/config/ 2>/dev/null || echo "  MISSING"
         echo ""
+
+        echo "=== Gateway ==="
+        ls -la /opt/gateway/ 2>/dev/null || echo "  MISSING"
+        echo ""
+
         echo "=== User Configuration ==="
         id steampipe 2>/dev/null || echo "steampipe user missing"
         echo "Steampipe home: $(getent passwd steampipe 2>/dev/null | cut -d: -f6)"
-
         echo ""
+
         echo "=== Secrets Directory ==="
         ls -la /opt/wsl-secrets/ 2>/dev/null || echo "/opt/wsl-secrets missing"
         echo "fstab entry:"
-        grep wsl-secrets /etc/fstab 2>/dev/null || echo "  No fstab entry for wsl-secrets"
-
+        grep wsl-secrets /etc/fstab 2>/dev/null || echo "  No fstab entry"
         echo ""
+
         echo "=== Systemd Services ==="
         ls -la /etc/systemd/system/steampipe.service 2>/dev/null || echo "steampipe.service missing"
         ls -la /etc/systemd/system/gateway.service 2>/dev/null || echo "gateway.service missing"
-
         echo ""
-        echo "=== Testing Steampipe Binary ==="
-        # Source environment and test as steampipe user
-        su - steampipe -s /bin/bash -c "
-            source /etc/environment 2>/dev/null || true
-            export STEAMPIPE_INSTALL_DIR=/opt/steampipe
-            export HOME=/opt/steampipe
-            /opt/steampipe/steampipe/steampipe --version
-        " 2>&1 || echo "Steampipe binary test failed"
 
+        echo "=== Init Scripts ==="
+        ls -la /opt/init/ 2>/dev/null || echo "/opt/init missing"
         echo ""
-        echo "=== Validate Mounts Script Test ==="
-        # Source environment for the validation script
-        source /etc/environment 2>/dev/null || true
-        export STEAMPIPE_INSTALL_DIR=/opt/steampipe
-        /opt/init/validate-mounts.sh 2>&1 || echo "Validation script failed (expected - no Windows mount in Docker)"
+
+        echo "=== Install Script ==="
+        which install.sh 2>/dev/null && echo "install.sh: found in PATH" || echo "install.sh: not in PATH"
+        ls -la /usr/local/bin/install.sh 2>/dev/null || echo "  Not at /usr/local/bin/install.sh"
+        echo ""
+
+        echo "=== Note ==="
+        echo "This is a platform-only image."
+        echo "Steampipe binaries are installed post-import via:"
+        echo "  sudo install.sh /mnt/c/path/to/steampipe-bundle.tgz"
     '
 
     # Cleanup debug image
@@ -460,10 +463,10 @@ debug_wsl_image() {
     echo ""
     log_info "Debug mode complete!"
     echo ""
-    echo "If all checks passed, the image should work in WSL."
     echo "To test in actual WSL:"
-    echo "  wsl --import steam-engine-test C:\\wsl\\steam-engine-test ${IMAGE_NAME}-${PROFILE}.tar"
-    echo "  wsl -d steam-engine-test"
+    echo "  1. Import:  wsl --import steam-engine-test C:\\wsl\\steam-engine-test ${IMAGE_NAME}-${PROFILE}.tar"
+    echo "  2. Start:   wsl -d steam-engine-test"
+    echo "  3. Install: sudo install.sh /mnt/c/path/to/steampipe-bundle.tgz"
 }
 
 # Prompt for WSL import (Windows only)
