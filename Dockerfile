@@ -39,10 +39,13 @@ COPY binaries/steampipe-bundle.tgz /tmp/
 RUN tar -xzf /tmp/steampipe-bundle.tgz -C /opt/steampipe \
     && rm /tmp/steampipe-bundle.tgz
 
-# Install FDW extension to RPM postgres
-RUN cp /opt/steampipe/fdw/steampipe_postgres_fdw.so /usr/pgsql-14/lib/steampipe_postgres_fdw.so \
-    && cp /opt/steampipe/fdw/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/extension/ \
-    && cp /opt/steampipe/fdw/steampipe_postgres_fdw.control /usr/pgsql-14/share/extension/ \
+# Install FDW extension to RPM postgres (paths must match steampipe expectations)
+# Steampipe expects: lib/postgresql/steampipe_postgres_fdw.so
+#                    share/postgresql/extension/steampipe_postgres_fdw*
+RUN mkdir -p /usr/pgsql-14/lib/postgresql /usr/pgsql-14/share/postgresql/extension \
+    && cp /opt/steampipe/fdw/steampipe_postgres_fdw.so /usr/pgsql-14/lib/postgresql/ \
+    && cp /opt/steampipe/fdw/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/postgresql/extension/ \
+    && cp /opt/steampipe/fdw/steampipe_postgres_fdw.control /usr/pgsql-14/share/postgresql/extension/ \
     && rm -rf /opt/steampipe/fdw
 
 # Create mount point for RPM postgres (bind mounted at runtime)
