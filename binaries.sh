@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BINARIES_DIR="$SCRIPT_DIR/binaries"
 
 # === Versions ===
-STEAMPIPE_VERSION="1.0.1"
+STEAMPIPE_VERSION="2.3.4"
 POSTGRES_VERSION="14.19.0"
 FDW_VERSION="2.1.4"
 
