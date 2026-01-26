@@ -39,13 +39,14 @@ COPY binaries/steampipe-bundle.tgz /tmp/
 RUN tar -xzf /tmp/steampipe-bundle.tgz -C /opt/steampipe \
     && rm /tmp/steampipe-bundle.tgz
 
-# Symlink postgres to RPM installation + create data dir
-# Use ln -sfn to replace directories with symlinks
-RUN mkdir -p /opt/steampipe/db/14.19.0/postgres \
-    && rm -rf /opt/steampipe/db/14.19.0/postgres/bin \
-    && rm -rf /opt/steampipe/db/14.19.0/postgres/lib \
-    && rm -rf /opt/steampipe/db/14.19.0/postgres/share \
-    && ln -sf /usr/pgsql-14/bin /opt/steampipe/db/14.19.0/postgres/bin \
+# Install FDW extension to RPM postgres
+RUN cp /opt/steampipe/fdw/steampipe_postgres_fdw.so /usr/pgsql-14/lib/steampipe_postgres_fdw.so \
+    && cp /opt/steampipe/fdw/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/extension/ \
+    && cp /opt/steampipe/fdw/steampipe_postgres_fdw.control /usr/pgsql-14/share/extension/ \
+    && rm -rf /opt/steampipe/fdw
+
+# Symlink steampipe db/ to RPM postgres
+RUN ln -sf /usr/pgsql-14/bin /opt/steampipe/db/14.19.0/postgres/bin \
     && ln -sf /usr/pgsql-14/lib /opt/steampipe/db/14.19.0/postgres/lib \
     && ln -sf /usr/pgsql-14/share /opt/steampipe/db/14.19.0/postgres/share \
     && mkdir -p /opt/steampipe/db/14.19.0/postgres/data \
