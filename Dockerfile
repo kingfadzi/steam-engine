@@ -39,12 +39,14 @@ COPY binaries/steampipe-bundle.tgz /tmp/
 RUN tar -xzf /tmp/steampipe-bundle.tgz -C /opt/steampipe \
     && rm /tmp/steampipe-bundle.tgz
 
-# Symlink postgres to RPM installation
+# Symlink postgres to RPM installation + create data dir
 RUN mkdir -p /opt/steampipe/db/14.19.0/postgres \
     && rm -rf /opt/steampipe/db/14.19.0/postgres/bin \
     && ln -sf /usr/pgsql-14/bin /opt/steampipe/db/14.19.0/postgres/bin \
     && ln -sf /usr/pgsql-14/lib /opt/steampipe/db/14.19.0/postgres/lib \
-    && ln -sf /usr/pgsql-14/share /opt/steampipe/db/14.19.0/postgres/share
+    && ln -sf /usr/pgsql-14/share /opt/steampipe/db/14.19.0/postgres/share \
+    && mkdir -p /opt/steampipe/db/14.19.0/postgres/data \
+    && chown -R steampipe:steampipe /opt/steampipe/db
 
 # Config files
 COPY --chown=steampipe:steampipe config/steampipe/*.spc /opt/steampipe/config/
