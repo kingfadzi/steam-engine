@@ -66,6 +66,7 @@ set +a
 
 # Environment
 export STEAMPIPE_INSTALL_DIR="$INSTALL_DIR"
+export STEAMPIPE_UPDATE_CHECK=false
 export HOME="$HOME_DIR"
 
 # Start steampipe

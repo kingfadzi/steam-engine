@@ -11,6 +11,7 @@ Group=fadzi
 
 Environment=STEAMPIPE_INSTALL_DIR=/home/fadzi/.steampipe
 Environment=HOME=/home/fadzi
+Environment=STEAMPIPE_UPDATE_CHECK=false
 WorkingDirectory=/home/fadzi
 
 # Create postgres socket directory as root before starting (+ prefix = run as root)
