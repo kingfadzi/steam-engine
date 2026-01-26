@@ -1,43 +1,78 @@
 # Steam Engine WSL Image
 # Steampipe + Gateway ETL for Jira/GitLab → DW PostgreSQL
 #
-# Build: ./build.sh vpn
+# Build: ./binaries.sh && ./build.sh vpn
 # Import: wsl --import steam-engine C:\wsl\steam-engine steam-engine.tar
 #
 # Multi-stage build:
-#   Stage 1 (Alma9): Build steampipe with embedded postgres
-#   Stage 2 (wsl-base): Runtime image with pre-built steampipe
+#   Stage 1 (Alma9): Assemble steampipe from local binaries + install plugins
+#   Stage 2 (wsl-base): Runtime image
 #
 
 # ============================================
-# Stage 1: Build steampipe on Alma9
+# Stage 1: Assemble steampipe on Alma9
 # ============================================
 FROM almalinux:9 AS steampipe-builder
 
-# Install dependencies
-RUN dnf install -y curl tar gzip
+RUN dnf install -y tar gzip xz
 
-# Install steampipe CLI
-RUN curl -fsSL https://steampipe.io/install/steampipe.sh | sh
+# Versions (must match binaries.sh)
+ENV POSTGRES_VERSION=14.19.0
+ENV FDW_VERSION=2.1.4
 
-# Set up environment for steampipe
-ENV HOME=/root
+# Steampipe env
+ENV HOME=/home/builder
+ENV STEAMPIPE_INSTALL_DIR=/home/builder/.steampipe
 ENV STEAMPIPE_UPDATE_CHECK=false
 ENV STEAMPIPE_TELEMETRY=none
 
-# Initialize steampipe - this downloads embedded postgres
-# Start service briefly to trigger setup, then stop
-RUN steampipe service start && sleep 5 && steampipe service stop
+RUN useradd -m builder
+WORKDIR /home/builder
 
-# Copy FDW into steampipe's postgres directory
-COPY binaries/steampipe-bundle.tgz /tmp/steampipe-bundle.tgz
-RUN mkdir -p /tmp/fdw-extract \
-    && tar -xzf /tmp/steampipe-bundle.tgz -C /tmp/fdw-extract --wildcards '*/fdw/*' \
-    && PGDIR=$(ls -d /root/.steampipe/db/*/postgres) \
-    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw.so "$PGDIR/lib/" \
-    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw--1.0.sql "$PGDIR/share/extension/" \
-    && cp /tmp/fdw-extract/fdw/steampipe_postgres_fdw.control "$PGDIR/share/extension/" \
-    && rm -rf /tmp/fdw-extract /tmp/steampipe-bundle.tgz
+# ============================================
+# 1. Steampipe CLI
+# ============================================
+COPY binaries/steampipe_linux_amd64.tar.gz /tmp/
+RUN tar -xzf /tmp/steampipe_linux_amd64.tar.gz -C /usr/local/bin \
+    && rm /tmp/steampipe_linux_amd64.tar.gz
+
+# ============================================
+# 2. Portable Postgres
+# ============================================
+COPY binaries/postgres-${POSTGRES_VERSION}-linux-amd64.txz /tmp/
+RUN mkdir -p /home/builder/.steampipe/db/${POSTGRES_VERSION}/postgres \
+    && tar -xJf /tmp/postgres-${POSTGRES_VERSION}-linux-amd64.txz \
+       -C /home/builder/.steampipe/db/${POSTGRES_VERSION}/postgres \
+    && rm /tmp/postgres-${POSTGRES_VERSION}-linux-amd64.txz
+
+# ============================================
+# 3. FDW Extension
+# ============================================
+COPY binaries/steampipe_postgres_fdw.so.gz /tmp/
+COPY binaries/steampipe_postgres_fdw.control /tmp/
+COPY binaries/steampipe_postgres_fdw--1.0.sql /tmp/
+
+RUN gunzip -c /tmp/steampipe_postgres_fdw.so.gz \
+      > /home/builder/.steampipe/db/${POSTGRES_VERSION}/postgres/lib/postgresql/steampipe_postgres_fdw.so \
+    && cp /tmp/steampipe_postgres_fdw.control \
+          /home/builder/.steampipe/db/${POSTGRES_VERSION}/postgres/share/postgresql/extension/ \
+    && cp /tmp/steampipe_postgres_fdw--1.0.sql \
+          /home/builder/.steampipe/db/${POSTGRES_VERSION}/postgres/share/postgresql/extension/ \
+    && rm /tmp/steampipe_postgres_fdw.*
+
+# ============================================
+# 4. Database versions.json
+# ============================================
+RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"}}' \
+    > /home/builder/.steampipe/db/versions.json
+
+# ============================================
+# 5. Install plugins via steampipe (OCI download)
+# ============================================
+RUN chown -R builder:builder /home/builder/.steampipe
+
+USER builder
+RUN steampipe plugin install turbot/jira theapsgroup/gitlab
 
 # ============================================
 # Stage 2: Runtime image
@@ -58,7 +93,7 @@ ARG DEFAULT_USER=fadzi
 # Copy pre-built steampipe from builder
 # ============================================
 COPY --from=steampipe-builder /usr/local/bin/steampipe /usr/local/bin/steampipe
-COPY --from=steampipe-builder /root/.steampipe /home/${DEFAULT_USER}/.steampipe
+COPY --from=steampipe-builder /home/builder/.steampipe /home/${DEFAULT_USER}/.steampipe
 
 # Fix ownership
 RUN chown -R ${DEFAULT_USER}:${DEFAULT_USER} /home/${DEFAULT_USER}/.steampipe
@@ -99,7 +134,6 @@ COPY config/gateway/application.yml /home/${DEFAULT_USER}/.gateway/
 # Init/utility scripts
 COPY scripts/init/*.sh /home/${DEFAULT_USER}/.local/bin/
 COPY scripts/bin/*.sh /home/${DEFAULT_USER}/.local/bin/
-# Ensure Unix line endings (strip CR) and make executable
 RUN sed -i 's/\r$//' /home/${DEFAULT_USER}/.local/bin/*.sh \
     && chmod +x /home/${DEFAULT_USER}/.local/bin/*.sh
 
@@ -118,7 +152,6 @@ ENV STEAMPIPE_PORT=${STEAMPIPE_PORT}
 ENV GATEWAY_PORT=${GATEWAY_PORT}
 ENV WIN_MOUNT=${WIN_MOUNT}
 
-# Persist ENV for WSL
 RUN echo "STEAMPIPE_INSTALL_DIR=/home/${DEFAULT_USER}/.steampipe" >> /etc/environment \
     && echo "STEAMPIPE_MOD_LOCATION=/home/${DEFAULT_USER}/.steampipe" >> /etc/environment \
     && echo "PATH=/usr/local/bin:/home/${DEFAULT_USER}/.local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/sbin:/bin" >> /etc/environment

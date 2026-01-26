@@ -1,0 +1,59 @@
+# Test Dockerfile - just the builder stage
+FROM almalinux:9
+
+RUN dnf install -y tar gzip xz
+
+# Versions
+ENV POSTGRES_VERSION=14.19.0
+ENV FDW_VERSION=2.1.4
+
+# Steampipe env
+ENV HOME=/home/builder
+ENV STEAMPIPE_INSTALL_DIR=/home/builder/.steampipe
+ENV STEAMPIPE_UPDATE_CHECK=false
+ENV STEAMPIPE_TELEMETRY=none
+
+RUN useradd -m builder
+WORKDIR /home/builder
+
+# 1. Steampipe CLI
+COPY binaries/steampipe_linux_amd64.tar.gz /tmp/
+RUN tar -xzf /tmp/steampipe_linux_amd64.tar.gz -C /usr/local/bin \
+    && rm /tmp/steampipe_linux_amd64.tar.gz
+
+# 2. Portable Postgres
+COPY binaries/postgres-14.19.0-linux-amd64.txz /tmp/
+RUN mkdir -p /home/builder/.steampipe/db/14.19.0/postgres \
+    && tar -xJf /tmp/postgres-14.19.0-linux-amd64.txz \
+       -C /home/builder/.steampipe/db/14.19.0/postgres \
+    && rm /tmp/postgres-14.19.0-linux-amd64.txz
+
+# 3. FDW Extension
+COPY binaries/steampipe_postgres_fdw.so.gz /tmp/
+COPY binaries/steampipe_postgres_fdw.control /tmp/
+COPY binaries/steampipe_postgres_fdw--1.0.sql /tmp/
+
+RUN gunzip -c /tmp/steampipe_postgres_fdw.so.gz \
+      > /home/builder/.steampipe/db/14.19.0/postgres/lib/postgresql/steampipe_postgres_fdw.so \
+    && cp /tmp/steampipe_postgres_fdw.control \
+          /home/builder/.steampipe/db/14.19.0/postgres/share/postgresql/extension/ \
+    && cp /tmp/steampipe_postgres_fdw--1.0.sql \
+          /home/builder/.steampipe/db/14.19.0/postgres/share/postgresql/extension/ \
+    && rm /tmp/steampipe_postgres_fdw.*
+
+# 4. Database versions.json
+RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"}}' \
+    > /home/builder/.steampipe/db/versions.json
+
+# 5. Fix ownership and install plugins
+RUN chown -R builder:builder /home/builder/.steampipe
+
+USER builder
+RUN steampipe plugin install turbot/jira theapsgroup/gitlab
+
+# Verify
+RUN steampipe plugin list
+RUN ls -la ~/.steampipe/db/14.19.0/postgres/bin/
+RUN ls -la ~/.steampipe/plugins/
+
+CMD ["steampipe", "service", "start", "--foreground"]

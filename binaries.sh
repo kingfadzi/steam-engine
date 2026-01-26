@@ -4,10 +4,18 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BINARIES_DIR="$SCRIPT_DIR/binaries"
 
-# === Binary URLs ===
-# Steampipe bundle - only used for FDW extraction during build
-STEAMPIPE_BUNDLE_URL="https://github.com/kingfadzi/steampipe-bundler/releases/download/v20260125/steampipe-bundle-20260125.tgz"
+# === Versions ===
+STEAMPIPE_VERSION="1.0.1"
+POSTGRES_VERSION="14.19.0"
+FDW_VERSION="2.1.4"
+
+# === URLs ===
+STEAMPIPE_URL="https://github.com/turbot/steampipe/releases/download/v${STEAMPIPE_VERSION}/steampipe_linux_amd64.tar.gz"
+POSTGRES_URL="https://github.com/kingfadzi/steampipe-bundler/releases/download/v20260125/postgres-${POSTGRES_VERSION}-linux-amd64.txz"
+FDW_BASE_URL="https://github.com/turbot/steampipe-postgres-fdw/releases/download/v${FDW_VERSION}"
 GATEWAY_URL="https://github.com/kingfadzi/gateway/releases/download/v1.0.0/jira-sync-service-1.0.0-SNAPSHOT.jar"
+
+# Plugins are OCI-only, installed via steampipe in Dockerfile
 
 # Parse arguments
 FORCE=false
@@ -23,20 +31,48 @@ download_binary() {
     local dest="$3"
 
     if [[ -f "$BINARIES_DIR/$dest" ]] && [[ "$FORCE" != "true" ]]; then
-        echo "Exists: $dest (use --force to re-download)"
+        echo "✓ Exists: $dest"
         return
     fi
 
-    echo "Downloading: $name → $dest"
+    echo "↓ Downloading: $name"
     curl -fL# "$url" -o "$BINARIES_DIR/$dest"
     echo "  Done: $(du -h "$BINARIES_DIR/$dest" | cut -f1)"
 }
 
 mkdir -p "$BINARIES_DIR"
 
-echo "=== Downloading binaries ==="
-download_binary "Steampipe Bundle (for FDW)" "$STEAMPIPE_BUNDLE_URL" "steampipe-bundle.tgz"
-download_binary "Gateway" "$GATEWAY_URL" "gateway.jar"
-echo "=== Done ==="
+echo "=== Downloading Steampipe Components ==="
+echo ""
 
+# Steampipe CLI
+download_binary "Steampipe CLI v${STEAMPIPE_VERSION}" \
+    "$STEAMPIPE_URL" \
+    "steampipe_linux_amd64.tar.gz"
+
+# Portable Postgres
+download_binary "Postgres ${POSTGRES_VERSION}" \
+    "$POSTGRES_URL" \
+    "postgres-${POSTGRES_VERSION}-linux-amd64.txz"
+
+# FDW
+download_binary "FDW binary v${FDW_VERSION}" \
+    "${FDW_BASE_URL}/steampipe_postgres_fdw.so.linux_amd64.gz" \
+    "steampipe_postgres_fdw.so.gz"
+
+download_binary "FDW control v${FDW_VERSION}" \
+    "${FDW_BASE_URL}/steampipe_postgres_fdw.control" \
+    "steampipe_postgres_fdw.control"
+
+download_binary "FDW SQL v${FDW_VERSION}" \
+    "${FDW_BASE_URL}/steampipe_postgres_fdw--1.0.sql" \
+    "steampipe_postgres_fdw--1.0.sql"
+
+# Gateway
+download_binary "Gateway" \
+    "$GATEWAY_URL" \
+    "gateway.jar"
+
+echo ""
+echo "=== Done ==="
 ls -lh "$BINARIES_DIR/"
