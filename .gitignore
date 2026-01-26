@@ -26,3 +26,7 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Secrets (real env files ignored, test files tracked)
+secrets/*.env
+!secrets/*.env.test
