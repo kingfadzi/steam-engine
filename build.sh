@@ -445,15 +445,16 @@ debug_wsl_image() {
         ls -la /opt/init/ 2>/dev/null || echo "/opt/init missing"
         echo ""
 
-        echo "=== Install Script ==="
-        which install.sh 2>/dev/null && echo "install.sh: found in PATH" || echo "install.sh: not in PATH"
-        ls -la /usr/local/bin/install.sh 2>/dev/null || echo "  Not at /usr/local/bin/install.sh"
+        echo "=== Postgres Symlink ==="
+        ls -la /opt/steampipe/db/14.19.0/postgres/ 2>/dev/null || echo "  Missing"
         echo ""
 
-        echo "=== Note ==="
-        echo "This is a platform-only image."
-        echo "Steampipe binaries are installed post-import via:"
-        echo "  sudo install.sh /mnt/c/path/to/steampipe-bundle.tgz"
+        echo "=== Postgres Binary (RPM) ==="
+        /usr/pgsql-14/bin/postgres --version 2>/dev/null || echo "  Not installed"
+        echo ""
+
+        echo "=== Steampipe Binary ==="
+        /opt/steampipe/steampipe/steampipe --version 2>/dev/null || echo "  Not found"
     '
 
     # Cleanup debug image
@@ -464,9 +465,12 @@ debug_wsl_image() {
     log_info "Debug mode complete!"
     echo ""
     echo "To test in actual WSL:"
-    echo "  1. Import:  wsl --import steam-engine-test C:\\wsl\\steam-engine-test ${IMAGE_NAME}-${PROFILE}.tar"
-    echo "  2. Start:   wsl -d steam-engine-test"
-    echo "  3. Install: sudo install.sh /mnt/c/path/to/steampipe-bundle.tgz"
+    echo "  1. Import:  wsl --import steam-engine C:\\wsl\\steam-engine ${IMAGE_NAME}-${PROFILE}.tar"
+    echo "  2. Start:   wsl -d steam-engine"
+    echo "  3. Configure secrets and restart:"
+    echo "     cp /opt/steampipe/config/steampipe.env.example /mnt/c/.../secrets/steampipe.env"
+    echo "     wsl --shutdown && wsl -d steam-engine"
+    echo "  4. Check:   systemctl status steampipe gateway"
 }
 
 # Prompt for WSL import (Windows only)

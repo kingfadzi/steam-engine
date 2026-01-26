@@ -3,7 +3,6 @@
 #
 # Build: ./build.sh vpn
 # Import: wsl --import steam-engine C:\wsl\steam-engine steam-engine.tar
-# Setup: install.sh /mnt/c/path/to/steampipe-bundle.tgz
 #
 # Requires: wsl-base:${PROFILE} to be built first (auto-builds if missing)
 #
@@ -12,7 +11,7 @@ FROM wsl-base:${PROFILE}
 
 USER root
 
-# Build arguments (steam-engine specific)
+# Build arguments
 ARG GATEWAY_RELEASE=gateway.jar
 ARG STEAMPIPE_PORT=9193
 ARG GATEWAY_PORT=8080
@@ -20,39 +19,51 @@ ARG WIN_MOUNT=/mnt/c/devhome/projects/steamengine
 ARG DEFAULT_USER=fadzi
 
 # ============================================
-# Additional Packages (steam-engine specific)
+# PostgreSQL 14 from local RPMs
 # ============================================
-RUN dnf install -y postgresql && dnf clean all
+COPY binaries/postgres/*.rpm /tmp/postgres/
+RUN dnf install -y /tmp/postgres/*.rpm \
+    && rm -rf /tmp/postgres \
+    && dnf clean all
 
 # ============================================
-# Service User (create FIRST, before file operations)
+# Service User
 # ============================================
 RUN useradd -r -d /opt/steampipe -s /bin/bash steampipe \
     && mkdir -p /opt/steampipe /opt/gateway /opt/wsl-secrets
 
 # ============================================
-# Steampipe Directory Structure
+# Steampipe (baked into image)
 # ============================================
-# Binaries installed post-import via install.sh
-# Runtime uses /run/steampipe (tmpfs), data persists in /opt/steampipe
-RUN mkdir -p /opt/steampipe/config \
-    /opt/steampipe/data \
-    /opt/steampipe/internal \
-    && chown -R steampipe:steampipe /opt/steampipe
+COPY binaries/steampipe-bundle.tgz /tmp/
+RUN tar -xzf /tmp/steampipe-bundle.tgz -C /opt/steampipe \
+    && rm /tmp/steampipe-bundle.tgz
 
-# Copy steampipe plugin configs and example env file
+# Symlink postgres to RPM installation
+RUN mkdir -p /opt/steampipe/db/14.19.0/postgres \
+    && rm -rf /opt/steampipe/db/14.19.0/postgres/bin \
+    && ln -sf /usr/pgsql-14/bin /opt/steampipe/db/14.19.0/postgres/bin \
+    && ln -sf /usr/pgsql-14/lib /opt/steampipe/db/14.19.0/postgres/lib \
+    && ln -sf /usr/pgsql-14/share /opt/steampipe/db/14.19.0/postgres/share
+
+# Config files
 COPY --chown=steampipe:steampipe config/steampipe/*.spc /opt/steampipe/config/
 COPY --chown=steampipe:steampipe config/steampipe/steampipe.env.example /opt/steampipe/config/
 
-# Runtime environment (steampipe runs from tmpfs)
-ENV STEAMPIPE_INSTALL_DIR=/run/steampipe
-ENV STEAMPIPE_MOD_LOCATION=/run/steampipe
-ENV PATH="/run/steampipe/steampipe:/run/steampipe/bin:${PATH}"
+# Persistent directories and permissions
+RUN mkdir -p /opt/steampipe/data /opt/steampipe/internal \
+    && chown -R steampipe:steampipe /opt/steampipe \
+    && chmod +x /opt/steampipe/steampipe/steampipe
 
-# Persist ENV to /etc/environment for WSL (docker export loses ENV)
-RUN echo "STEAMPIPE_INSTALL_DIR=/run/steampipe" >> /etc/environment \
-    && echo "STEAMPIPE_MOD_LOCATION=/run/steampipe" >> /etc/environment \
-    && echo "PATH=/run/steampipe/steampipe:/run/steampipe/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> /etc/environment
+# Environment
+ENV STEAMPIPE_INSTALL_DIR=/opt/steampipe
+ENV STEAMPIPE_MOD_LOCATION=/opt/steampipe
+ENV PATH="/opt/steampipe/steampipe:${PATH}"
+
+# Persist ENV for WSL
+RUN echo "STEAMPIPE_INSTALL_DIR=/opt/steampipe" >> /etc/environment \
+    && echo "STEAMPIPE_MOD_LOCATION=/opt/steampipe" >> /etc/environment \
+    && echo "PATH=/opt/steampipe/steampipe:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> /etc/environment
 
 # ============================================
 # Gateway Service
@@ -64,10 +75,12 @@ RUN mkdir -p /opt/gateway/logs \
     && chown -R steampipe:steampipe /opt/gateway
 
 # ============================================
-# Systemd Services (disabled by default, install.sh enables)
+# Systemd Services
 # ============================================
 COPY config/systemd/steampipe.service /etc/systemd/system/
 COPY config/systemd/gateway.service /etc/systemd/system/
+
+RUN systemctl enable steampipe.service gateway.service
 
 # ============================================
 # Initialization Scripts
@@ -76,7 +89,7 @@ COPY scripts/init/ /opt/init/
 RUN chmod +x /opt/init/*.sh
 
 # ============================================
-# Profile Scripts (steam-engine specific)
+# Profile Scripts
 # ============================================
 COPY scripts/profile.d/*.sh /etc/profile.d/
 RUN chmod 644 /etc/profile.d/*.sh 2>/dev/null || true
@@ -85,7 +98,7 @@ RUN chmod 644 /etc/profile.d/*.sh 2>/dev/null || true
 # Utility Scripts
 # ============================================
 COPY scripts/bin/ /usr/local/bin/
-RUN chmod +x /usr/local/bin/*.sh
+RUN chmod +x /usr/local/bin/*.sh 2>/dev/null || true
 
 # ============================================
 # WSL Configuration
@@ -93,7 +106,6 @@ RUN chmod +x /usr/local/bin/*.sh
 COPY config/wsl.conf /etc/wsl.conf
 RUN echo "${WIN_MOUNT}/secrets /opt/wsl-secrets none bind,nofail 0 0" > /etc/fstab
 
-# Ensure secrets directory ownership
 RUN chown steampipe:steampipe /opt/wsl-secrets
 
 # ============================================
@@ -107,5 +119,4 @@ ENV WIN_MOUNT=${WIN_MOUNT}
 USER ${DEFAULT_USER}
 WORKDIR /home/${DEFAULT_USER}
 
-# Default to systemd
 CMD ["/sbin/init"]

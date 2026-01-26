@@ -9,20 +9,12 @@ Type=simple
 User=steampipe
 Group=steampipe
 
-# Create /run/steampipe as tmpfs
-RuntimeDirectory=steampipe
-RuntimeDirectoryMode=0755
-
-# Environment
-Environment=STEAMPIPE_INSTALL_DIR=/run/steampipe
-Environment=STEAMPIPE_MOD_LOCATION=/run/steampipe
+Environment=STEAMPIPE_INSTALL_DIR=/opt/steampipe
 Environment=HOME=/opt/steampipe
 WorkingDirectory=/opt/steampipe
 
-# Extract and start in one script (no gap for scanner)
 ExecStart=/opt/init/steampipe-start.sh
-
-ExecStop=/run/steampipe/steampipe/steampipe service stop
+ExecStop=/opt/steampipe/steampipe/steampipe service stop
 
 Restart=on-failure
 RestartSec=10
