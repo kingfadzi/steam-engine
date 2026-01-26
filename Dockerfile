@@ -59,9 +59,9 @@ RUN systemctl mask postgresql-14.service
 # ============================================
 COPY config/systemd/steampipe.service /etc/systemd/system/
 COPY config/systemd/gateway.service /etc/systemd/system/
-COPY config/systemd/home-fadzi-.steampipe-db-14.19.0-postgres.mount /etc/systemd/system/
+COPY config/systemd/home-fadzi-.steampipe-db-14.2.0-postgres.mount /etc/systemd/system/
 
-RUN systemctl enable steampipe.service gateway.service home-fadzi-.steampipe-db-14.19.0-postgres.mount
+RUN systemctl enable steampipe.service gateway.service home-fadzi-.steampipe-db-14.2.0-postgres.mount
 
 # ============================================
 # Profile Scripts
@@ -78,7 +78,7 @@ COPY config/wsl.conf /etc/wsl.conf
 # Prepare user home directory
 # ============================================
 # Create directory structure (owned by default user)
-RUN mkdir -p /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres \
+RUN mkdir -p /home/${DEFAULT_USER}/.steampipe/db/14.2.0/postgres \
     && mkdir -p /home/${DEFAULT_USER}/.gateway \
     && mkdir -p /home/${DEFAULT_USER}/.secrets \
     && mkdir -p /home/${DEFAULT_USER}/.local/bin

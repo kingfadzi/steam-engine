@@ -11,7 +11,7 @@ export PGHOST=/tmp/postgresql
 
 HOME_DIR="/home/fadzi"
 INSTALL_DIR="$HOME_DIR/.steampipe"
-DATA_DIR="$INSTALL_DIR/db/14.19.0/data"
+DATA_DIR="$INSTALL_DIR/db/14.2.0/data"
 CONF_D="$DATA_DIR/postgresql.conf.d"
 SOCKET_CONF="$CONF_D/01-socket-dir.conf"
 
