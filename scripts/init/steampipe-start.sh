@@ -4,8 +4,14 @@
 #
 set -e
 
-# Create postgres socket directory in /tmp (avoids /run permission issues)
+# Create postgres socket directories
+# /run/postgresql is needed during steampipe's install phase
+# /tmp/postgresql is used for the actual service (configured via conf.d)
 mkdir -p /tmp/postgresql
+if [ ! -d /run/postgresql ]; then
+    sudo mkdir -p /run/postgresql
+    sudo chown fadzi:fadzi /run/postgresql
+fi
 export PGHOST=/tmp/postgresql
 
 HOME_DIR="/home/fadzi"
