@@ -455,8 +455,11 @@ debug_wsl_image() {
         echo "~/.local/bin:"
         ls -la /home/fadzi/.local/bin/ 2>/dev/null || echo "  MISSING"
         echo ""
-        echo "~/.local/share/steam-engine:"
-        ls -la /home/fadzi/.local/share/steam-engine/ 2>/dev/null || echo "  MISSING"
+        echo "~/.steampipe/plugins:"
+        ls -la /home/fadzi/.steampipe/plugins/hub.steampipe.io/plugins/ 2>/dev/null || echo "  MISSING"
+        echo ""
+        echo "~/.steampipe/config:"
+        ls -la /home/fadzi/.steampipe/config/ 2>/dev/null || echo "  MISSING"
         echo ""
 
         echo "=== User Configuration ==="
@@ -470,16 +473,15 @@ debug_wsl_image() {
         echo "=== Systemd Services ==="
         ls -la /etc/systemd/system/steampipe.service 2>/dev/null || echo "steampipe.service missing"
         ls -la /etc/systemd/system/gateway.service 2>/dev/null || echo "gateway.service missing"
-        ls -la /etc/systemd/system/home-fadzi-.steampipe-db-14.19.0-postgres.mount 2>/dev/null || echo "mount unit missing"
         echo ""
 
-        echo "=== Postgres Binary (RPM) ==="
-        /usr/pgsql-14/bin/postgres --version 2>/dev/null || echo "  Not installed"
+        echo "=== Embedded Postgres ==="
+        /home/fadzi/.steampipe/db/14.19.0/postgres/bin/postgres --version 2>/dev/null || echo "  Not installed"
         echo ""
 
         echo "=== FDW Extension ==="
-        ls -la /usr/pgsql-14/lib/postgresql/steampipe_postgres_fdw.so 2>/dev/null || echo "  FDW not installed"
-        ls /usr/pgsql-14/share/postgresql/extension/steampipe_postgres_fdw* 2>/dev/null || echo "  FDW extension files missing"
+        ls -la /home/fadzi/.steampipe/db/14.19.0/postgres/lib/postgresql/steampipe_postgres_fdw.so 2>/dev/null || echo "  FDW not installed"
+        ls /home/fadzi/.steampipe/db/14.19.0/postgres/share/postgresql/extension/steampipe_postgres_fdw* 2>/dev/null || echo "  FDW extension files missing"
     '
 
     # Cleanup debug image
@@ -492,10 +494,7 @@ debug_wsl_image() {
     echo "To test in actual WSL:"
     echo "  1. Import:  wsl --import steam-engine C:\\wsl\\steam-engine ${IMAGE_NAME}-${PROFILE}.tar"
     echo "  2. Start:   wsl -d steam-engine"
-    echo "  3. Configure secrets and restart:"
-    echo "     cp ~/.local/share/steam-engine/steampipe.env.example /mnt/c/.../secrets/steampipe.env"
-    echo "     wsl --shutdown && wsl -d steam-engine"
-    echo "  4. Check:   systemctl status steampipe gateway"
+    echo "  3. Check:   systemctl status steampipe gateway"
 }
 
 # Prompt for WSL import (Windows only)
