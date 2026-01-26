@@ -135,6 +135,9 @@ RUN mkdir -p /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres
 RUN echo '{"embedded_db":{"name":"embeddedDB","version":"14.19.0","image_digest":"sha256:84264ef41853178707bccb091f5450c22e835f8a98f9961592c75690321093d9","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"},"struct_version":20220411}' \
     > /home/${DEFAULT_USER}/.steampipe/db/versions.json
 
+# Copy steampipe plugin configs (credentials come from env vars at runtime)
+COPY config/steampipe/*.spc /home/${DEFAULT_USER}/.steampipe/config/
+
 # Fix ownership
 RUN chown -R ${DEFAULT_USER}:${DEFAULT_USER} /home/${DEFAULT_USER}/.steampipe
 

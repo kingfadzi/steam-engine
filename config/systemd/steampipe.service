@@ -8,6 +8,9 @@ Type=simple
 User=fadzi
 Group=fadzi
 
+# Load secrets from Windows mount (- prefix = don't fail if missing)
+EnvironmentFile=-/home/fadzi/.secrets/steampipe.env
+
 Environment=STEAMPIPE_INSTALL_DIR=/home/fadzi/.steampipe
 Environment=HOME=/home/fadzi
 Environment=STEAMPIPE_UPDATE_CHECK=false
