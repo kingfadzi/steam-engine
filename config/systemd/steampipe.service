@@ -9,6 +9,10 @@ Type=simple
 User=fadzi
 Group=fadzi
 
+# Create /run/postgresql owned by fadzi (postgres socket directory)
+RuntimeDirectory=postgresql
+RuntimeDirectoryMode=0755
+
 Environment=STEAMPIPE_INSTALL_DIR=/home/fadzi/.steampipe
 Environment=HOME=/home/fadzi
 WorkingDirectory=/home/fadzi
