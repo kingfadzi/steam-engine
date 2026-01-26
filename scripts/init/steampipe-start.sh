@@ -30,42 +30,20 @@ if [ ! -x "$INSTALL_DIR/steampipe/steampipe" ]; then
     fi
 fi
 
-# Pre-create socket config so it's ready when steampipe initializes postgres
+# Steampipe's postgresql.conf already includes 'include_dir = postgresql.conf.d'
+# We just need to put our socket config there. The conf.d dir is created by
+# steampipe's writePGConf() before postgres starts.
+#
+# On first install, our pre-created files get deleted. But after first failed
+# start, the conf.d exists and we can add our config for subsequent starts.
+
 CONF_D="$DATA_DIR/postgresql.conf.d"
 SOCKET_CONF="$CONF_D/01-socket-dir.conf"
-mkdir -p "$CONF_D"
-echo "unix_socket_directories = '/tmp/postgresql'" > "$SOCKET_CONF"
 
-# If postgresql.conf exists, ensure it includes conf.d
-if [ -f "$DATA_DIR/postgresql.conf" ]; then
-    if ! grep -q "include_dir = 'postgresql.conf.d'" "$DATA_DIR/postgresql.conf" 2>/dev/null; then
-        echo "include_dir = 'postgresql.conf.d'" >> "$DATA_DIR/postgresql.conf"
-    fi
-fi
-
-# Recovery: if data dir exists but steampipe role missing, recreate it
-# This handles cases where initdb was run manually without steampipe's setup
-PSQL="$INSTALL_DIR/db/14.19.0/postgres/bin/psql"
-PG_CTL="$INSTALL_DIR/db/14.19.0/postgres/bin/pg_ctl"
-if [ -f "$DATA_DIR/postgresql.conf" ]; then
-    # Start postgres temporarily to check/create role
-    if ! $PG_CTL status -D "$DATA_DIR" > /dev/null 2>&1; then
-        echo "Starting postgres temporarily for role check..."
-        $PG_CTL start -D "$DATA_DIR" -w -o "-k /tmp/postgresql" > /dev/null 2>&1
-        STARTED_PG=true
-    fi
-
-    # Create steampipe role if missing
-    if ! $PSQL -h /tmp/postgresql -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='steampipe'" 2>/dev/null | grep -q 1; then
-        echo "Creating steampipe role..."
-        $PSQL -h /tmp/postgresql -d postgres -c "CREATE ROLE steampipe WITH LOGIN SUPERUSER PASSWORD 'steampipe';" 2>/dev/null || true
-        $PSQL -h /tmp/postgresql -d postgres -c "CREATE DATABASE steampipe OWNER steampipe;" 2>/dev/null || true
-    fi
-
-    # Stop postgres if we started it
-    if [ "$STARTED_PG" = true ]; then
-        $PG_CTL stop -D "$DATA_DIR" -w > /dev/null 2>&1
-    fi
+# If conf.d exists (from previous steampipe run), add our socket config
+if [ -d "$CONF_D" ] && [ ! -f "$SOCKET_CONF" ]; then
+    echo "Configuring postgres socket directory..."
+    echo "unix_socket_directories = '/tmp/postgresql'" > "$SOCKET_CONF"
 fi
 
 # Check secrets
