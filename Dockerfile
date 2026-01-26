@@ -43,6 +43,9 @@ RUN mkdir -p /usr/pgsql-14/lib/postgresql /usr/pgsql-14/share/postgresql/extensi
 # Mask RPM postgres service to prevent conflicts
 RUN systemctl mask postgresql-14.service
 
+# Create postgres socket directory at boot (tmpfiles.d for /run which is tmpfs)
+RUN echo "d /run/postgresql 0755 ${DEFAULT_USER} ${DEFAULT_USER} -" > /etc/tmpfiles.d/postgresql.conf
+
 # ============================================
 # Systemd Services
 # ============================================
