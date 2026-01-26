@@ -4,7 +4,7 @@ Before=steampipe.service
 
 [Mount]
 What=/usr/pgsql-14
-Where=/opt/steampipe/db/14.19.0/postgres
+Where=/home/fadzi/.steampipe/db/14.19.0/postgres
 Type=none
 Options=bind
 

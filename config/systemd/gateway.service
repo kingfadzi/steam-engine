@@ -6,13 +6,13 @@ Wants=steampipe.service
 
 [Service]
 Type=simple
-User=steampipe
-Group=steampipe
+User=fadzi
+Group=fadzi
 
-WorkingDirectory=/opt/gateway
+WorkingDirectory=/home/fadzi
 
-ExecStartPre=/opt/init/gateway.sh
-ExecStart=/opt/init/gateway-start.sh
+ExecStartPre=/home/fadzi/.local/bin/gateway.sh
+ExecStart=/home/fadzi/.local/bin/gateway-start.sh
 
 Restart=on-failure
 RestartSec=30

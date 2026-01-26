@@ -1,21 +1,20 @@
 [Unit]
 Description=Steampipe SQL Service
 Documentation=https://steampipe.io/docs
-After=network.target local-fs.target opt-steampipe-db-14.19.0-postgres.mount
-Requires=opt-steampipe-db-14.19.0-postgres.mount
-RequiresMountsFor=/opt/wsl-secrets /opt/steampipe/db/14.19.0/postgres
+After=network.target local-fs.target home-fadzi-.steampipe-db-14.19.0-postgres.mount
+Requires=home-fadzi-.steampipe-db-14.19.0-postgres.mount
 
 [Service]
 Type=simple
-User=steampipe
-Group=steampipe
+User=fadzi
+Group=fadzi
 
-Environment=STEAMPIPE_INSTALL_DIR=/opt/steampipe
-Environment=HOME=/opt/steampipe
-WorkingDirectory=/opt/steampipe
+Environment=STEAMPIPE_INSTALL_DIR=/home/fadzi/.steampipe
+Environment=HOME=/home/fadzi
+WorkingDirectory=/home/fadzi
 
-ExecStart=/opt/init/steampipe-start.sh
-ExecStop=/opt/steampipe/steampipe/steampipe service stop
+ExecStart=/home/fadzi/.local/bin/steampipe-start.sh
+ExecStop=/home/fadzi/.steampipe/steampipe/steampipe service stop
 
 Restart=on-failure
 RestartSec=10

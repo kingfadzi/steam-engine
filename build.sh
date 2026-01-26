@@ -237,9 +237,9 @@ validate_image() {
     # Run container in background with sleep to keep it alive
     container_id=$(docker run -d "$IMAGE_NAME:$PROFILE" sleep infinity)
 
-    # Test 1: Steampipe binary exists and runs (must run as steampipe user)
-    echo -n "  Steampipe binary... "
-    if docker exec -u steampipe "$container_id" /opt/steampipe/steampipe/steampipe --version > /dev/null 2>&1; then
+    # Test 1: Steampipe bundle exists (will be extracted on first start)
+    echo -n "  Steampipe bundle... "
+    if docker exec "$container_id" test -f /home/fadzi/.local/share/steam-engine/steampipe-bundle.tgz; then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAILED${NC}"
@@ -248,16 +248,16 @@ validate_image() {
 
     # Test 2: Gateway JAR exists
     echo -n "  Gateway JAR... "
-    if docker exec "$container_id" test -f /opt/gateway/gateway.jar; then
+    if docker exec "$container_id" test -f /home/fadzi/.gateway/gateway.jar; then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAILED${NC}"
         test_failed=1
     fi
 
-    # Test 3: Plugin configs exist
-    echo -n "  Plugin configs... "
-    if docker exec "$container_id" bash -c "ls /opt/steampipe/config/*.spc > /dev/null 2>&1"; then
+    # Test 3: Plugin configs exist (staged for first-run copy)
+    echo -n "  Plugin configs (staged)... "
+    if docker exec "$container_id" bash -c "ls /home/fadzi/.local/share/steam-engine/*.spc > /dev/null 2>&1"; then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAILED${NC}"
@@ -266,32 +266,41 @@ validate_image() {
 
     # Test 4: Gateway config exists
     echo -n "  Gateway config... "
-    if docker exec "$container_id" test -f /opt/gateway/application.yml; then
+    if docker exec "$container_id" test -f /home/fadzi/.gateway/application.yml; then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAILED${NC}"
         test_failed=1
     fi
 
-    # Test 5: Steampipe user exists
-    echo -n "  Steampipe user... "
-    if docker exec "$container_id" id steampipe > /dev/null 2>&1; then
+    # Test 5: Default user exists (fadzi)
+    echo -n "  Default user (fadzi)... "
+    if docker exec "$container_id" id fadzi > /dev/null 2>&1; then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAILED${NC}"
         test_failed=1
     fi
 
-    # Test 6: Permissions on /opt/steampipe
-    echo -n "  Permissions... "
-    if docker exec "$container_id" bash -c "[ \$(stat -c '%U' /opt/steampipe) = 'steampipe' ]"; then
+    # Test 6: Steampipe home directory prepared
+    echo -n "  Steampipe mount point... "
+    if docker exec "$container_id" test -d /home/fadzi/.steampipe/db/14.19.0/postgres; then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAILED${NC}"
         test_failed=1
     fi
 
-    # Test 7: Systemd services configured
+    # Test 7: Secrets mount point exists
+    echo -n "  Secrets mount point... "
+    if docker exec "$container_id" test -d /home/fadzi/.secrets; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}FAILED${NC}"
+        test_failed=1
+    fi
+
+    # Test 8: Systemd services configured
     echo -n "  Systemd services... "
     if docker exec "$container_id" bash -c "test -f /etc/systemd/system/steampipe.service && test -f /etc/systemd/system/gateway.service"; then
         echo -e "${GREEN}OK${NC}"
@@ -300,7 +309,16 @@ validate_image() {
         test_failed=1
     fi
 
-    # Test 8: Java available (inherited from base)
+    # Test 9: Init scripts in place
+    echo -n "  Init scripts... "
+    if docker exec "$container_id" test -x /home/fadzi/.local/bin/steampipe-start.sh; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}FAILED${NC}"
+        test_failed=1
+    fi
+
+    # Test 10: Java available (inherited from base)
     echo -n "  Java runtime... "
     if docker exec "$container_id" java -version > /dev/null 2>&1; then
         echo -e "${GREEN}OK${NC}"
@@ -412,49 +430,44 @@ debug_wsl_image() {
         cat /etc/environment 2>/dev/null || echo "/etc/environment missing"
         echo ""
 
-        echo "=== Persistent Directory Structure ==="
-        echo "/opt/steampipe:"
-        ls -la /opt/steampipe/ 2>/dev/null || echo "  MISSING"
+        echo "=== Home Directory Structure ==="
+        echo "~/.steampipe:"
+        ls -la /home/fadzi/.steampipe/ 2>/dev/null || echo "  MISSING"
         echo ""
-
-        echo "=== Config Files ==="
-        ls -la /opt/steampipe/config/ 2>/dev/null || echo "  MISSING"
+        echo "~/.gateway:"
+        ls -la /home/fadzi/.gateway/ 2>/dev/null || echo "  MISSING"
         echo ""
-
-        echo "=== Gateway ==="
-        ls -la /opt/gateway/ 2>/dev/null || echo "  MISSING"
+        echo "~/.secrets:"
+        ls -la /home/fadzi/.secrets/ 2>/dev/null || echo "  MISSING"
+        echo ""
+        echo "~/.local/bin:"
+        ls -la /home/fadzi/.local/bin/ 2>/dev/null || echo "  MISSING"
+        echo ""
+        echo "~/.local/share/steam-engine:"
+        ls -la /home/fadzi/.local/share/steam-engine/ 2>/dev/null || echo "  MISSING"
         echo ""
 
         echo "=== User Configuration ==="
-        id steampipe 2>/dev/null || echo "steampipe user missing"
-        echo "Steampipe home: $(getent passwd steampipe 2>/dev/null | cut -d: -f6)"
+        id fadzi 2>/dev/null || echo "fadzi user missing"
         echo ""
 
-        echo "=== Secrets Directory ==="
-        ls -la /opt/wsl-secrets/ 2>/dev/null || echo "/opt/wsl-secrets missing"
-        echo "fstab entry:"
-        grep wsl-secrets /etc/fstab 2>/dev/null || echo "  No fstab entry"
+        echo "=== fstab (secrets mount) ==="
+        cat /etc/fstab 2>/dev/null || echo "  No fstab"
         echo ""
 
         echo "=== Systemd Services ==="
         ls -la /etc/systemd/system/steampipe.service 2>/dev/null || echo "steampipe.service missing"
         ls -la /etc/systemd/system/gateway.service 2>/dev/null || echo "gateway.service missing"
-        echo ""
-
-        echo "=== Init Scripts ==="
-        ls -la /opt/init/ 2>/dev/null || echo "/opt/init missing"
-        echo ""
-
-        echo "=== Postgres Symlink ==="
-        ls -la /opt/steampipe/db/14.19.0/postgres/ 2>/dev/null || echo "  Missing"
+        ls -la /etc/systemd/system/home-fadzi-.steampipe-db-14.19.0-postgres.mount 2>/dev/null || echo "mount unit missing"
         echo ""
 
         echo "=== Postgres Binary (RPM) ==="
         /usr/pgsql-14/bin/postgres --version 2>/dev/null || echo "  Not installed"
         echo ""
 
-        echo "=== Steampipe Binary ==="
-        /opt/steampipe/steampipe/steampipe --version 2>/dev/null || echo "  Not found"
+        echo "=== FDW Extension ==="
+        ls -la /usr/pgsql-14/lib/postgresql/steampipe_postgres_fdw.so 2>/dev/null || echo "  FDW not installed"
+        ls /usr/pgsql-14/share/postgresql/extension/steampipe_postgres_fdw* 2>/dev/null || echo "  FDW extension files missing"
     '
 
     # Cleanup debug image
@@ -468,7 +481,7 @@ debug_wsl_image() {
     echo "  1. Import:  wsl --import steam-engine C:\\wsl\\steam-engine ${IMAGE_NAME}-${PROFILE}.tar"
     echo "  2. Start:   wsl -d steam-engine"
     echo "  3. Configure secrets and restart:"
-    echo "     cp /opt/steampipe/config/steampipe.env.example /mnt/c/.../secrets/steampipe.env"
+    echo "     cp ~/.local/share/steam-engine/steampipe.env.example /mnt/c/.../secrets/steampipe.env"
     echo "     wsl --shutdown && wsl -d steam-engine"
     echo "  4. Check:   systemctl status steampipe gateway"
 }

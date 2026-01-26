@@ -5,9 +5,10 @@
 #
 set -e
 
-INSTALL_DIR="${STEAMPIPE_INSTALL_DIR:-/opt/steampipe}"
+HOME_DIR="/home/fadzi"
+INSTALL_DIR="${STEAMPIPE_INSTALL_DIR:-$HOME_DIR/.steampipe}"
 CONFIG_DIR="$INSTALL_DIR/config"
-SECRETS_DIR="/opt/wsl-secrets"
+SECRETS_DIR="$HOME_DIR/.secrets"
 
 echo "Initializing Steampipe..."
 
@@ -53,7 +54,7 @@ fi
 if [ "$HAS_SOURCE" = false ]; then
     echo ""
     echo "WARNING: No data sources configured!"
-    echo "Set environment variables in /opt/wsl-secrets/steampipe.env"
+    echo "Set environment variables in $SECRETS_DIR/steampipe.env"
 fi
 
 echo "Steampipe initialization complete."

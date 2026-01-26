@@ -5,7 +5,9 @@
 #
 set -e
 
-SECRETS_DIR="/opt/wsl-secrets"
+HOME_DIR="/home/fadzi"
+SECRETS_DIR="$HOME_DIR/.secrets"
+GATEWAY_DIR="$HOME_DIR/.gateway"
 
 # Source environment files
 if [ -f "$SECRETS_DIR/steampipe.env" ]; then
@@ -24,5 +26,5 @@ exec /usr/bin/java \
     -Xms256m \
     -Xmx512m \
     -Djava.security.egd=file:/dev/./urandom \
-    -jar /opt/gateway/gateway.jar \
-    --spring.config.location=file:/opt/gateway/application.yml
+    -jar "$GATEWAY_DIR/gateway.jar" \
+    --spring.config.location=file:"$GATEWAY_DIR/application.yml"

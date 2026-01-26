@@ -5,11 +5,12 @@
 #
 set -e
 
-SECRETS_DIR="/opt/wsl-secrets"
+HOME_DIR="/home/fadzi"
+SECRETS_DIR="$HOME_DIR/.secrets"
 
 echo "Initializing Gateway..."
 
-# Source environment files (symlink created by steampipe-start.sh)
+# Source environment files
 if [ -f "$SECRETS_DIR/steampipe.env" ]; then
     set -a
     source "$SECRETS_DIR/steampipe.env"
@@ -52,7 +53,7 @@ check_env "DW_PASSWORD" "true" || MISSING=true
 if [ "$MISSING" = "true" ]; then
     echo ""
     echo "ERROR: Missing required DW configuration!"
-    echo "Set environment variables in /opt/wsl-secrets/gateway.env:"
+    echo "Set environment variables in $SECRETS_DIR/gateway.env:"
     echo "  DW_HOST=your-dw-host.com"
     echo "  DW_PORT=5432"
     echo "  DW_DATABASE=lct_data"

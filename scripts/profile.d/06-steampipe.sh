@@ -2,12 +2,9 @@
 # Steampipe environment setup
 # Force-set critical paths (may be lost on docker export to WSL)
 
-export STEAMPIPE_INSTALL_DIR=/opt/steampipe
-export STEAMPIPE_MOD_LOCATION=/opt/steampipe
-export PATH="/opt/steampipe/steampipe:/opt/steampipe/bin:$PATH"
-
-# Ensure HOME is set for service user context
-export HOME="${HOME:-/opt/steampipe}"
+export STEAMPIPE_INSTALL_DIR="$HOME/.steampipe"
+export STEAMPIPE_MOD_LOCATION="$HOME/.steampipe"
+export PATH="$HOME/.steampipe/steampipe:$HOME/.local/bin:$PATH"
 
 # Aliases
 alias sp='steampipe'
