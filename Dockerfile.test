@@ -32,7 +32,8 @@ COPY binaries/steampipe_postgres_fdw--1.0.sql /tmp/
 RUN gunzip -c /tmp/steampipe_postgres_fdw.so.gz > /usr/pgsql-14/lib/steampipe_postgres_fdw.so \
     && cp /tmp/steampipe_postgres_fdw.control /usr/pgsql-14/share/extension/ \
     && cp /tmp/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/extension/ \
-    && rm /tmp/steampipe_postgres_fdw.*
+    && rm /tmp/steampipe_postgres_fdw.* \
+    && chown -R builder:builder /usr/pgsql-14
 
 # 3. Steampipe CLI
 COPY binaries/steampipe_linux_amd64.tar.gz /tmp/
@@ -46,8 +47,8 @@ RUN mkdir -p /home/builder/.steampipe/db/14.19.0/postgres \
     && cp -a /usr/pgsql-14/lib /home/builder/.steampipe/db/14.19.0/postgres/ \
     && cp -a /usr/pgsql-14/share /home/builder/.steampipe/db/14.19.0/postgres/
 
-# 5. Database versions.json
-RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"}}' \
+# 5. Database versions.json with correct digest
+RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","image_digest":"sha256:84264ef41853178707bccb091f5450c22e835f8a98f9961592c75690321093d9","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"}}' \
     > /home/builder/.steampipe/db/versions.json
 
 # 6. Install plugins from local files

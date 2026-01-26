@@ -110,7 +110,8 @@ COPY binaries/steampipe_postgres_fdw--1.0.sql /tmp/
 RUN gunzip -c /tmp/steampipe_postgres_fdw.so.gz > /usr/pgsql-14/lib/steampipe_postgres_fdw.so \
     && cp /tmp/steampipe_postgres_fdw.control /usr/pgsql-14/share/extension/ \
     && cp /tmp/steampipe_postgres_fdw--1.0.sql /usr/pgsql-14/share/extension/ \
-    && rm /tmp/steampipe_postgres_fdw.*
+    && rm /tmp/steampipe_postgres_fdw.* \
+    && chown -R ${DEFAULT_USER}:${DEFAULT_USER} /usr/pgsql-14
 
 # ============================================
 # Copy pre-built steampipe from builder
@@ -123,8 +124,8 @@ COPY --from=steampipe-builder /home/builder/.steampipe /home/${DEFAULT_USER}/.st
 # ============================================
 RUN mkdir -p /home/${DEFAULT_USER}/.steampipe/db/14.19.0/postgres
 
-# Create versions.json so steampipe thinks DB is installed
-RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"}}' \
+# Create versions.json with correct digest so steampipe doesn't reinstall
+RUN echo '{"db":{"name":"embeddedDB","version":"14.19.0","image_digest":"sha256:84264ef41853178707bccb091f5450c22e835f8a98f9961592c75690321093d9","install_date":"2025-01-26T00:00:00Z"},"fdw_extension":{"name":"fdwExtension","version":"2.1.4","install_date":"2025-01-26T00:00:00Z"}}' \
     > /home/${DEFAULT_USER}/.steampipe/db/versions.json
 
 # Fix ownership
