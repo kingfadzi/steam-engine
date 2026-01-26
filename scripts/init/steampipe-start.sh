@@ -35,9 +35,16 @@ if [ ! -f "$DATA_DIR/postgresql.conf" ]; then
     echo "Initializing postgres database..."
     mkdir -p "$DATA_DIR"
     "$INSTALL_DIR/db/14.19.0/postgres/bin/initdb" -D "$DATA_DIR"
+fi
 
-    # Configure postgres to use /tmp for socket (avoids /run permission issues)
-    echo "unix_socket_directories = '/tmp/postgresql'" >> "$DATA_DIR/postgresql.conf"
+# Ensure postgres uses /tmp for socket (avoids /run permission issues)
+if ! grep -q "unix_socket_directories = '/tmp/postgresql'" "$DATA_DIR/postgresql.conf" 2>/dev/null; then
+    echo "Configuring postgres socket directory..."
+    sed -i "s|^#*unix_socket_directories.*|unix_socket_directories = '/tmp/postgresql'|" "$DATA_DIR/postgresql.conf"
+    # If sed didn't match, append it
+    if ! grep -q "unix_socket_directories = '/tmp/postgresql'" "$DATA_DIR/postgresql.conf"; then
+        echo "unix_socket_directories = '/tmp/postgresql'" >> "$DATA_DIR/postgresql.conf"
+    fi
 fi
 
 # Check secrets
