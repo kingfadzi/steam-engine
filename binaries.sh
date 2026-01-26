@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BINARIES_DIR="$SCRIPT_DIR/binaries"
 
 # === Binary URLs ===
-STEAMPIPE_URL="https://github.com/kingfadzi/steampipe-bundler/releases/download/v20260124/steampipe-bundle-20260124.tgz"
+STEAMPIPE_URL="https://github.com/kingfadzi/steampipe-bundler/releases/download/v20260125/steampipe-bundle-20260125.tgz"
 GATEWAY_URL="https://github.com/kingfadzi/gateway/releases/download/v1.0.0/jira-sync-service-1.0.0-SNAPSHOT.jar"
 
 # PostgreSQL RPMs
