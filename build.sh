@@ -158,14 +158,26 @@ ensure_base_image() {
 check_binaries() {
     log_info "Checking binaries..."
 
-    if [ ! -f "$SCRIPT_DIR/binaries/steampipe-bundle.tgz" ]; then
-        log_error "Missing: binaries/steampipe-bundle.tgz"
-        echo "Run: ./binaries.sh"
-        exit 1
-    fi
+    local missing=0
+    local required_files=(
+        "steampipe_linux_amd64.tar.gz"
+        "postgres-14.19.0-linux-amd64.txz"
+        "steampipe_postgres_fdw.so.gz"
+        "steampipe_postgres_fdw.control"
+        "steampipe_postgres_fdw--1.0.sql"
+        "gateway.jar"
+        "steampipe-plugin-jira.tar.gz"
+        "steampipe-plugin-gitlab.tar.gz"
+    )
 
-    if [ ! -f "$SCRIPT_DIR/binaries/gateway.jar" ]; then
-        log_error "Missing: binaries/gateway.jar"
+    for f in "${required_files[@]}"; do
+        if [ ! -f "$SCRIPT_DIR/binaries/$f" ]; then
+            log_error "Missing: binaries/$f"
+            missing=1
+        fi
+    done
+
+    if [ $missing -eq 1 ]; then
         echo "Run: ./binaries.sh"
         exit 1
     fi
@@ -237,9 +249,9 @@ validate_image() {
     # Run container in background with sleep to keep it alive
     container_id=$(docker run -d "$IMAGE_NAME:$PROFILE" sleep infinity)
 
-    # Test 1: Steampipe bundle exists (will be extracted on first start)
-    echo -n "  Steampipe bundle... "
-    if docker exec "$container_id" test -f /home/fadzi/.local/share/steam-engine/steampipe-bundle.tgz; then
+    # Test 1: Steampipe CLI exists
+    echo -n "  Steampipe CLI... "
+    if docker exec "$container_id" test -x /usr/local/bin/steampipe; then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAILED${NC}"
@@ -255,9 +267,9 @@ validate_image() {
         test_failed=1
     fi
 
-    # Test 3: Plugin configs exist (staged for first-run copy)
-    echo -n "  Plugin configs (staged)... "
-    if docker exec "$container_id" bash -c "ls /home/fadzi/.local/share/steam-engine/*.spc > /dev/null 2>&1"; then
+    # Test 3: Plugins installed
+    echo -n "  Plugins installed... "
+    if docker exec "$container_id" bash -c "test -d /home/fadzi/.steampipe/plugins/hub.steampipe.io/plugins/turbot/jira@latest && test -d /home/fadzi/.steampipe/plugins/hub.steampipe.io/plugins/theapsgroup/gitlab@latest"; then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAILED${NC}"
