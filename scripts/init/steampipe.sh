@@ -30,11 +30,11 @@ echo "Checking data source configuration..."
 
 HAS_SOURCE=false
 
-if check_env "JIRA_URL" && check_env "JIRA_TOKEN"; then
+if check_env "JIRA_URL" && check_env "JIRA_PERSONAL_ACCESS_TOKEN"; then
     echo "  Jira: configured"
     HAS_SOURCE=true
 else
-    echo "  Jira: not configured (JIRA_URL, JIRA_TOKEN)"
+    echo "  Jira: not configured (JIRA_URL, JIRA_PERSONAL_ACCESS_TOKEN)"
 fi
 
 if check_env "GITLAB_URL" && check_env "GITLAB_TOKEN"; then

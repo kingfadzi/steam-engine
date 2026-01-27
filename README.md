@@ -1,6 +1,9 @@
 # Steam Engine
 
-WSL image for Steampipe + Gateway ETL. Extracts Jira/GitLab/SonarQube data and loads to DW PostgreSQL for dbt transforms.
+WSL image for Steampipe + Gateway ETL. Extracts data from DevOps tools and loads to DW PostgreSQL for dbt transforms.
+
+**Currently supported:** Jira, GitLab
+**Coming soon:** Bitbucket, SonarQube
 
 ## Quick Start
 
@@ -68,7 +71,7 @@ Create on Windows at `C:\devhome\projects\steamengine\secrets\`:
 **steampipe.env**
 ```bash
 JIRA_URL=https://jira.company.com
-JIRA_TOKEN=xxx
+JIRA_PERSONAL_ACCESS_TOKEN=xxx
 GITLAB_URL=https://gitlab.company.com
 GITLAB_TOKEN=xxx
 ```

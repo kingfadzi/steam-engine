@@ -59,7 +59,7 @@ start_steampipe() {
         export STEAMPIPE_DATABASE_PORT='$STEAMPIPE_PORT'
         export STEAMPIPE_LOG_LEVEL='${STEAMPIPE_LOG_LEVEL:-WARN}'
         export JIRA_URL='${JIRA_URL:-}'
-        export JIRA_TOKEN='${JIRA_TOKEN:-}'
+        export JIRA_PERSONAL_ACCESS_TOKEN='${JIRA_PERSONAL_ACCESS_TOKEN:-}'
         export GITLAB_URL='${GITLAB_URL:-}'
         export GITLAB_TOKEN='${GITLAB_TOKEN:-}'
         export BITBUCKET_URL='${BITBUCKET_URL:-}'

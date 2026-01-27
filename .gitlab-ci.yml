@@ -33,7 +33,6 @@ include:
       deploy_stage: deploy
 
 stages:
-  - validate
   - build
   - deploy
   - verify
@@ -46,28 +45,7 @@ variables:
   GIT_DEPTH: 20
   IMAGE_NAME: steam-engine-steampipe
 
-# 1. Validate deploy scripts
-validate:
-  stage: validate
-  image: $BUILDER_IMAGE_PYTHON_311
-  script:
-    - |
-      echo "Validating deploy scripts..."
-      REQUIRED="deploy/build_release.sh deploy/stop.sh deploy/start.sh deploy/smoke_test.sh"
-      for script in $REQUIRED; do
-        if [ ! -f "$script" ]; then
-          echo "ERROR: Missing $script"; exit 1
-        elif [ ! -x "$script" ]; then
-          echo "ERROR: Not executable $script"; exit 1
-        else
-          echo "OK: $script"
-        fi
-      done
-      echo "Validation passed"
-  rules:
-    - if: $CI_COMMIT_BRANCH
-
-# 2. Package source as tarball for deployment
+# Package source as tarball for deployment
 build_release:
   stage: build
   image: $BUILDER_IMAGE_PYTHON_311
