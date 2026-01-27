@@ -8,12 +8,12 @@
 # Set these in /opt/wsl-secrets/steampipe.env or Windows environment
 
 connection "jira" {
-  plugin                = "jira@1.1.0"
+  plugin                = "turbot/jira@1.1.0"
   base_url              = env("JIRA_URL")
   personal_access_token = env("JIRA_TOKEN")
 }
 
-plugin "jira" {
+plugin "turbot/jira" {
   limiter "jira_api_limit" {
     max_concurrency = 2
     bucket_size     = 20

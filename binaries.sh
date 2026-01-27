@@ -18,7 +18,7 @@ GATEWAY_URL="https://github.com/kingfadzi/gateway/releases/download/v1.0.0/jira-
 PGDG_BASE_URL="https://download.postgresql.org/pub/repos/yum/14/redhat/rhel-9-x86_64"
 
 # Plugins (mirrored from ghcr.io to bundler)
-JIRA_PLUGIN_VERSION="2.0.3"
+JIRA_PLUGIN_VERSION="1.1.0"
 GITLAB_PLUGIN_VERSION="0.6.0"
 BUNDLER_BASE_URL="https://github.com/kingfadzi/steampipe-bundler/releases/download/v20260125"
 JIRA_PLUGIN_URL="${BUNDLER_BASE_URL}/steampipe-plugin-jira-${JIRA_PLUGIN_VERSION}-linux-amd64.tar.gz"
