@@ -15,8 +15,8 @@ connection "jira" {
 
 plugin "turbot/jira" {
   limiter "jira_api_limit" {
-    max_concurrency = 2
-    bucket_size     = 20
-    fill_rate       = 3
+    max_concurrency = 1
+    bucket_size     = 5
+    fill_rate       = 1
   }
 }
