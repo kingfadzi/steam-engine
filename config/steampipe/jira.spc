@@ -8,7 +8,7 @@
 # Set these in /opt/wsl-secrets/steampipe.env or Windows environment
 
 connection "jira" {
-  plugin                = "turbot/jira@1.1.0"
+  plugin                = "turbot/jira"
   base_url              = env("JIRA_URL")
   personal_access_token = env("JIRA_TOKEN")
 }

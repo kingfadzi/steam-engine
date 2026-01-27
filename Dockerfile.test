@@ -68,10 +68,10 @@ COPY binaries/steampipe-plugin-gitlab.tar.gz /tmp/
 # Jira plugin
 RUN mkdir -p /tmp/jira-plugin \
     && tar -xzf /tmp/steampipe-plugin-jira.tar.gz -C /tmp/jira-plugin \
-    && mkdir -p /home/builder/.steampipe/plugins/hub.steampipe.io/plugins/turbot/jira@1.1.0 \
+    && mkdir -p /home/builder/.steampipe/plugins/hub.steampipe.io/plugins/turbot/jira@latest \
     && gunzip -c /tmp/jira-plugin/steampipe-plugin-jira_linux_amd64.gz \
-       > /home/builder/.steampipe/plugins/hub.steampipe.io/plugins/turbot/jira@1.1.0/steampipe-plugin-jira.plugin \
-    && chmod +x /home/builder/.steampipe/plugins/hub.steampipe.io/plugins/turbot/jira@1.1.0/steampipe-plugin-jira.plugin \
+       > /home/builder/.steampipe/plugins/hub.steampipe.io/plugins/turbot/jira@latest/steampipe-plugin-jira.plugin \
+    && chmod +x /home/builder/.steampipe/plugins/hub.steampipe.io/plugins/turbot/jira@latest/steampipe-plugin-jira.plugin \
     && mkdir -p /home/builder/.steampipe/config \
     && cp /tmp/jira-plugin/config/* /home/builder/.steampipe/config/ \
     && rm -rf /tmp/jira-plugin /tmp/steampipe-plugin-jira.tar.gz

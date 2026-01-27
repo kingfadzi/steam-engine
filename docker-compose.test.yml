@@ -1,0 +1,98 @@
+# Docker Compose for testing steam-engine
+# Independent of WSL - uses standard Docker volumes for secrets
+#
+# Usage:
+#   docker-compose -f docker-compose.test.yml up
+#   docker-compose -f docker-compose.test.yml --profile validate run --rm validate
+#
+version: '3.8'
+
+services:
+  # Main test service
+  steam-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    image: steam-engine:test
+    container_name: steam-engine-test
+    volumes:
+      - ./secrets:/opt/wsl-secrets:ro
+    ports:
+      - "9193:9193"  # Steampipe
+      - "8080:8080"  # Gateway
+    environment:
+      - STEAMPIPE_PORT=9193
+      - GATEWAY_PORT=8080
+    depends_on:
+      test-dw:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "9193"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Validation service (CI mode)
+  validate:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    image: steam-engine:test
+    volumes:
+      - ./secrets:/opt/wsl-secrets:ro
+    command: validate
+    profiles:
+      - validate
+
+  # Steampipe only
+  steampipe:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    image: steam-engine:test
+    volumes:
+      - ./secrets:/opt/wsl-secrets:ro
+    ports:
+      - "9193:9193"
+    command: steampipe
+    profiles:
+      - steampipe
+
+  # Gateway only
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    image: steam-engine:test
+    volumes:
+      - ./secrets:/opt/wsl-secrets:ro
+    ports:
+      - "8080:8080"
+    command: gateway
+    depends_on:
+      test-dw:
+        condition: service_healthy
+    profiles:
+      - gateway
+
+  # Test PostgreSQL (simulates DW for gateway)
+  test-dw:
+    image: postgres:15-alpine
+    container_name: test-dw
+    environment:
+      POSTGRES_DB: test_db
+      POSTGRES_USER: gateway
+      POSTGRES_PASSWORD: testpassword
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gateway -d test_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - test-dw-data:/var/lib/postgresql/data
+
+volumes:
+  test-dw-data:
